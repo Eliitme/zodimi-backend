@@ -1,0 +1,324 @@
+{
+  "_comment": "Shared contract fixture (backend + iOS decode tests). Verified against astro-charts.com to the arc-minute. Regenerate when the contract changes and copy to BOTH repos.",
+  "request": {
+    "birth_date": "1955-02-24",
+    "birth_time": "19:15:00",
+    "birth_time_unknown": false,
+    "lat": 37.7749,
+    "lon": -122.4194,
+    "tz_of_birth": "America/Los_Angeles"
+  },
+  "response": {
+    "planets": [
+      {
+        "name": "sun",
+        "sign": "pisces",
+        "degree": 5.7481,
+        "house": 6,
+        "is_retrograde": false
+      },
+      {
+        "name": "moon",
+        "sign": "aries",
+        "degree": 7.7472,
+        "house": 7,
+        "is_retrograde": false
+      },
+      {
+        "name": "mercury",
+        "sign": "aquarius",
+        "degree": 14.3617,
+        "house": 5,
+        "is_retrograde": true
+      },
+      {
+        "name": "venus",
+        "sign": "capricorn",
+        "degree": 21.1719,
+        "house": 4,
+        "is_retrograde": false
+      },
+      {
+        "name": "mars",
+        "sign": "aries",
+        "degree": 29.0905,
+        "house": 8,
+        "is_retrograde": false
+      },
+      {
+        "name": "jupiter",
+        "sign": "cancer",
+        "degree": 20.5079,
+        "house": 10,
+        "is_retrograde": true
+      },
+      {
+        "name": "saturn",
+        "sign": "scorpio",
+        "degree": 21.1627,
+        "house": 3,
+        "is_retrograde": false
+      },
+      {
+        "name": "uranus",
+        "sign": "cancer",
+        "degree": 24.1349,
+        "house": 10,
+        "is_retrograde": true
+      },
+      {
+        "name": "neptune",
+        "sign": "libra",
+        "degree": 28.0513,
+        "house": 2,
+        "is_retrograde": true
+      },
+      {
+        "name": "pluto",
+        "sign": "leo",
+        "degree": 25.3228,
+        "house": 12,
+        "is_retrograde": true
+      },
+      {
+        "name": "chiron",
+        "sign": "aquarius",
+        "degree": 2.3322,
+        "house": 5,
+        "is_retrograde": false
+      },
+      {
+        "name": "north_node",
+        "sign": "capricorn",
+        "degree": 3.4114,
+        "house": 4,
+        "is_retrograde": true
+      }
+    ],
+    "houses": [
+      {
+        "number": 1,
+        "sign": "virgo",
+        "cusp_degree": 22.2913
+      },
+      {
+        "number": 2,
+        "sign": "libra",
+        "cusp_degree": 18.2428
+      },
+      {
+        "number": 3,
+        "sign": "scorpio",
+        "cusp_degree": 18.3532
+      },
+      {
+        "number": 4,
+        "sign": "sagittarius",
+        "cusp_degree": 21.3151
+      },
+      {
+        "number": 5,
+        "sign": "capricorn",
+        "cusp_degree": 24.474
+      },
+      {
+        "number": 6,
+        "sign": "aquarius",
+        "cusp_degree": 25.209
+      },
+      {
+        "number": 7,
+        "sign": "pisces",
+        "cusp_degree": 22.2913
+      },
+      {
+        "number": 8,
+        "sign": "aries",
+        "cusp_degree": 18.2428
+      },
+      {
+        "number": 9,
+        "sign": "taurus",
+        "cusp_degree": 18.3532
+      },
+      {
+        "number": 10,
+        "sign": "gemini",
+        "cusp_degree": 21.3151
+      },
+      {
+        "number": 11,
+        "sign": "cancer",
+        "cusp_degree": 24.474
+      },
+      {
+        "number": 12,
+        "sign": "leo",
+        "cusp_degree": 25.209
+      }
+    ],
+    "angles": {
+      "asc": {
+        "sign": "virgo",
+        "degree": 22.2913
+      },
+      "mc": {
+        "sign": "gemini",
+        "degree": 21.3151
+      }
+    },
+    "time_unknown": false,
+    "aspects": [
+      {
+        "p1": "sun",
+        "p2": "neptune",
+        "type": "trine",
+        "orb": 7.7
+      },
+      {
+        "p1": "moon",
+        "p2": "chiron",
+        "type": "sextile",
+        "orb": 5.41
+      },
+      {
+        "p1": "mercury",
+        "p2": "mc",
+        "type": "trine",
+        "orb": 6.95
+      },
+      {
+        "p1": "venus",
+        "p2": "jupiter",
+        "type": "opposition",
+        "orb": 0.66
+      },
+      {
+        "p1": "venus",
+        "p2": "saturn",
+        "type": "sextile",
+        "orb": 0.01
+      },
+      {
+        "p1": "venus",
+        "p2": "uranus",
+        "type": "opposition",
+        "orb": 2.96
+      },
+      {
+        "p1": "venus",
+        "p2": "asc",
+        "type": "trine",
+        "orb": 1.12
+      },
+      {
+        "p1": "mars",
+        "p2": "uranus",
+        "type": "square",
+        "orb": 4.96
+      },
+      {
+        "p1": "mars",
+        "p2": "neptune",
+        "type": "opposition",
+        "orb": 1.04
+      },
+      {
+        "p1": "mars",
+        "p2": "pluto",
+        "type": "trine",
+        "orb": 3.77
+      },
+      {
+        "p1": "mars",
+        "p2": "chiron",
+        "type": "square",
+        "orb": 3.24
+      },
+      {
+        "p1": "jupiter",
+        "p2": "saturn",
+        "type": "trine",
+        "orb": 0.65
+      },
+      {
+        "p1": "jupiter",
+        "p2": "uranus",
+        "type": "conjunction",
+        "orb": 3.63
+      },
+      {
+        "p1": "jupiter",
+        "p2": "asc",
+        "type": "sextile",
+        "orb": 1.78
+      },
+      {
+        "p1": "saturn",
+        "p2": "uranus",
+        "type": "trine",
+        "orb": 2.97
+      },
+      {
+        "p1": "saturn",
+        "p2": "pluto",
+        "type": "square",
+        "orb": 4.16
+      },
+      {
+        "p1": "saturn",
+        "p2": "asc",
+        "type": "sextile",
+        "orb": 1.13
+      },
+      {
+        "p1": "uranus",
+        "p2": "neptune",
+        "type": "square",
+        "orb": 3.92
+      },
+      {
+        "p1": "uranus",
+        "p2": "chiron",
+        "type": "opposition",
+        "orb": 8.2
+      },
+      {
+        "p1": "uranus",
+        "p2": "asc",
+        "type": "sextile",
+        "orb": 1.84
+      },
+      {
+        "p1": "neptune",
+        "p2": "pluto",
+        "type": "sextile",
+        "orb": 2.73
+      },
+      {
+        "p1": "neptune",
+        "p2": "chiron",
+        "type": "square",
+        "orb": 4.28
+      },
+      {
+        "p1": "neptune",
+        "p2": "mc",
+        "type": "trine",
+        "orb": 6.74
+      },
+      {
+        "p1": "pluto",
+        "p2": "mc",
+        "type": "sextile",
+        "orb": 4.01
+      },
+      {
+        "p1": "asc",
+        "p2": "mc",
+        "type": "square",
+        "orb": 0.98
+      }
+    ]
+  }
+}

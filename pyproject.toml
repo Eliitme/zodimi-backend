@@ -11,6 +11,9 @@ dependencies = [
     "supabase>=2.6",
     "pydantic-settings>=2.3",
     "pyjwt[crypto]>=2.8",
+    "kerykeion>=5.12.9,<6",
+    "geopy>=2.5.0",
+    "timezonefinder>=8.2.5",
 ]
 
 [dependency-groups]
