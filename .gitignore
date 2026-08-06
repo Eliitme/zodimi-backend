@@ -1,0 +1,23 @@
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+
+# uv
+uv.lock.tmp
+
+# Supabase local dev
+supabase/.temp/
+supabase/.branches/
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/

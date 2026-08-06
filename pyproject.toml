@@ -1,0 +1,24 @@
+[project]
+name = "stellune-backend"
+version = "0.1.0"
+description = "Stellune — astrology & tarot backend (FastAPI + Supabase)"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "AGPL-3.0-or-later"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "supabase>=2.6",
+    "pydantic-settings>=2.3",
+    "pyjwt[crypto]>=2.8",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "httpx>=0.27",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
