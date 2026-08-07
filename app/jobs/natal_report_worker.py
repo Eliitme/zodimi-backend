@@ -24,6 +24,7 @@ from app.ai.safety_guardrails import system_rules
 from app.astro.chart_calculator import calculate_natal_chart
 from app.core.supabase_client import get_service_client
 from app.jobs.job_heartbeat import record_failure, record_success
+from app.push.apns_client import notify_report_ready
 
 logger = logging.getLogger("stellune.jobs.report_worker")
 
@@ -125,8 +126,13 @@ def process_one() -> bool:
             "content": content,
             "completed_at": datetime.now(UTC).isoformat(),
         }).eq("id", report["id"]).eq("status", "generating").execute()
-        # Push notification on completion is wired in the push phase
-        # (apns_client) — the worker is the single place that flips to done.
+        # BRD async mode: tell the user their report is ready instead of
+        # making them poll the app. Never fails the job (silent no-op when
+        # the user has no device or APNs is unconfigured).
+        try:
+            notify_report_ready(report["user_id"], profile.get("locale") or "en")
+        except Exception as exc:
+            logger.warning("report-ready push failed: %s", exc)
         logger.info("report %s done (%d sections)", report["id"], len(REPORT_SECTIONS))
         record_success(JOB_NAME)
         return True

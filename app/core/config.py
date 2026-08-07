@@ -28,6 +28,13 @@ class Settings(BaseSettings):
     revenuecat_webhook_secret: str = ""
     revenuecat_api_key: str = ""
 
+    # APNs token-based auth (.p8). Empty in dev → push calls become no-ops.
+    apns_key_path: str = ""      # path to AuthKey_XXXXXXXXXX.p8 on the host
+    apns_key_id: str = ""
+    apns_team_id: str = ""
+    apns_bundle_id: str = "com.stellune.app"
+    apns_use_sandbox: bool = True
+
 
 @lru_cache
 def get_settings() -> Settings:

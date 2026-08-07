@@ -8,8 +8,10 @@ Routing convention (enforced here, do not bypass):
 
 from fastapi import APIRouter, Depends, FastAPI, Request
 
+from app.api.account_router import router as account_router
 from app.api.auth_router import router as auth_router
 from app.api.charts_router import router as charts_router
+from app.api.devices_router import router as devices_router
 from app.api.geocode_router import router as geocode_router
 from app.api.iap_sync_router import router as iap_sync_router
 from app.api.iap_webhook_router import router as iap_webhook_router
@@ -22,8 +24,10 @@ app = FastAPI(title="Stellune API", version="0.1.0")
 
 public = APIRouter()
 api = APIRouter(prefix="/v1", dependencies=[Depends(require_user)])
+api.include_router(account_router)
 api.include_router(auth_router)
 api.include_router(charts_router)
+api.include_router(devices_router)
 api.include_router(geocode_router)
 api.include_router(iap_sync_router)
 api.include_router(reports_router)
