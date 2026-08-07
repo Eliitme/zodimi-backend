@@ -6,7 +6,10 @@ Routing convention (enforced here, do not bypass):
   here requires a verified Supabase JWT by default.
 """
 
+import logging
+
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.account_router import router as account_router
 from app.api.auth_router import router as auth_router
@@ -21,7 +24,27 @@ from app.api.tarot_router import router as tarot_router
 from app.core.auth import require_user
 from app.core.config import get_settings
 
+logger = logging.getLogger("stellune.api")
+
 app = FastAPI(title="Stellune API", version="0.1.0")
+
+# The web app runs on its own origin; the iOS app is unaffected (native
+# clients do not enforce CORS). Explicit origins only — see config.
+_origins = get_settings().allowed_origins
+if _origins:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=_origins,
+        # Auth travels in the Authorization header, not cookies.
+        allow_credentials=False,
+        allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type", "Accept-Language"],
+    )
+else:
+    logger.warning(
+        "WEB_ORIGINS is empty — browser clients will be blocked by CORS. "
+        "Set it to the web app's origin(s) in this environment's .env."
+    )
 
 public = APIRouter()
 api = APIRouter(prefix="/v1", dependencies=[Depends(require_user)])

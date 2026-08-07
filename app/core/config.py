@@ -33,6 +33,19 @@ class Settings(BaseSettings):
     # premium on demand.
     dev_tools: bool = False
 
+    # Origins allowed to call the API from a browser (the web app). Comma
+    # separated. Deliberately NOT "*": a wildcard would let any site drive a
+    # signed-in user's account.
+    #
+    # Empty by default ON PURPOSE. A localhost default would silently ship to
+    # production and break the real web app with a CORS error that shows up
+    # only in the browser console — better to fail loudly at startup.
+    web_origins: str = ""
+
+    @property
+    def allowed_origins(self) -> list[str]:
+        return [o.strip() for o in self.web_origins.split(",") if o.strip()]
+
     # APNs token-based auth (.p8). Empty in dev → push calls become no-ops.
     apns_key_path: str = ""      # path to AuthKey_XXXXXXXXXX.p8 on the host
     apns_key_id: str = ""
