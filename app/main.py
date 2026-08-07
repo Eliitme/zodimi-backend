@@ -11,7 +11,10 @@ from fastapi import APIRouter, Depends, FastAPI, Request
 from app.api.auth_router import router as auth_router
 from app.api.charts_router import router as charts_router
 from app.api.geocode_router import router as geocode_router
+from app.api.iap_sync_router import router as iap_sync_router
+from app.api.iap_webhook_router import router as iap_webhook_router
 from app.api.reports_router import router as reports_router
+from app.api.synastry_router import router as synastry_router
 from app.api.tarot_router import router as tarot_router
 from app.core.auth import require_user
 
@@ -22,13 +25,20 @@ api = APIRouter(prefix="/v1", dependencies=[Depends(require_user)])
 api.include_router(auth_router)
 api.include_router(charts_router)
 api.include_router(geocode_router)
+api.include_router(iap_sync_router)
 api.include_router(reports_router)
+api.include_router(synastry_router)
 api.include_router(tarot_router)
 
 
 @public.get("/health")
 def health() -> dict:
     return {"status": "ok"}
+
+
+# The RevenueCat webhook is the ONE allowlisted exception to default JWT
+# auth — it authenticates with its own shared secret (see its module doc).
+public.include_router(iap_webhook_router, prefix="/v1")
 
 
 @api.get("/me")

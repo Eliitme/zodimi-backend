@@ -36,6 +36,18 @@
       "locale": "en",
       "version": 1,
       "template": "Write the \"{section_title}\" section (slug: {section_slug}) of a personal astrology report for {user_name}, in English, 250-350 words. Chart data:\n{chart_summary}\nBe specific to this data, avoid generic filler, do not repeat other sections. Do NOT add a heading — body text only."
+    },
+    {
+      "key": "synastry",
+      "locale": "vi",
+      "version": 1,
+      "template": "Viết luận giải tương hợp (synastry) bằng tiếng Việt, 200-300 từ, cho mối quan hệ giữa người dùng và {partner_name}. Các góc chiếu liên bản đồ:\n{aspects}\nPhân tích điểm hòa hợp và điểm cần thấu hiểu nhau, giọng ấm áp, cân bằng, không phán xét mối quan hệ tốt/xấu tuyệt đối."
+    },
+    {
+      "key": "synastry",
+      "locale": "en",
+      "version": 1,
+      "template": "Write a synastry reading in English, 200-300 words, for the relationship between the user and {partner_name}. Inter-chart aspects:\n{aspects}\nCover harmonies and growth edges, warm and balanced tone, never an absolute good/bad verdict on the relationship."
     }
   ]
 }

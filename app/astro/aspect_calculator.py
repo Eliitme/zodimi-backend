@@ -18,10 +18,9 @@ POINT_NAMES = {
 }
 
 
-def calculate_major_aspects(subject: AstrologicalSubject) -> list[dict]:
-    """Return the subject's major natal aspects in contract shape."""
+def _to_contract(raw_aspects) -> list[dict]:
     aspects = []
-    for a in NatalAspects(subject).relevant_aspects:
+    for a in raw_aspects:
         if a.aspect not in MAJOR_ASPECTS:
             continue
         p1 = POINT_NAMES.get(a.p1_name)
@@ -35,3 +34,17 @@ def calculate_major_aspects(subject: AstrologicalSubject) -> list[dict]:
             "orb": round(a.orbit, 2),
         })
     return aspects
+
+
+def calculate_major_aspects(subject: AstrologicalSubject) -> list[dict]:
+    """Return the subject's major natal aspects in contract shape."""
+    return _to_contract(NatalAspects(subject).relevant_aspects)
+
+
+def calculate_synastry_aspects(
+    subject_a: AstrologicalSubject, subject_b: AstrologicalSubject
+) -> list[dict]:
+    """Major INTER-chart aspects (p1 = person A's point, p2 = person B's)."""
+    from kerykeion import SynastryAspects
+
+    return _to_contract(SynastryAspects(subject_a, subject_b).relevant_aspects)

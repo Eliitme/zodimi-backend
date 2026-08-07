@@ -27,12 +27,37 @@ ACTIVE_STATUSES = ("queued", "generating")
 DAILY_REPORT_CAP = 5
 
 
+FREE_SECTION_COUNT = 3
+
+
 class ReportStatusResponse(BaseModel):
     id: UUID
     status: str
     content: str | None = None
     requested_at: str
     completed_at: str | None = None
+    # Titles of sections withheld server-side for non-premium users. The
+    # client renders these as locked rows — it never receives their text.
+    locked_section_titles: list[str] | None = None
+
+
+def _gate_content(row: dict, user_id: str) -> dict:
+    """Server-side premium gate: a non-premium user (e.g. subscription
+    expired after the report was generated) gets only the free preview —
+    shipping full content and hiding it client-side is not a gate."""
+    if row.get("status") != "done" or not row.get("content"):
+        return row
+    if is_premium(user_id):
+        return row
+    sections = row["content"].split("\n## ")
+    if len(sections) <= FREE_SECTION_COUNT:
+        return row
+    gated = dict(row)
+    gated["content"] = "\n## ".join(sections[:FREE_SECTION_COUNT])
+    gated["locked_section_titles"] = [
+        s.split("\n", 1)[0].strip() for s in sections[FREE_SECTION_COUNT:]
+    ]
+    return gated
 
 
 @router.post("/natal", response_model=ReportStatusResponse, status_code=status.HTTP_201_CREATED)
@@ -114,7 +139,7 @@ def get_latest_natal_report(request: Request) -> ReportStatusResponse:
     )
     if not rows:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No report yet")
-    return ReportStatusResponse(**rows[0])
+    return ReportStatusResponse(**_gate_content(rows[0], user_id))
 
 
 @router.get("/natal/{report_id}", response_model=ReportStatusResponse)
@@ -128,4 +153,4 @@ def get_natal_report(request: Request, report_id: UUID) -> ReportStatusResponse:
     )
     if not rows:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Report not found")
-    return ReportStatusResponse(**rows[0])
+    return ReportStatusResponse(**_gate_content(rows[0], user_id))
