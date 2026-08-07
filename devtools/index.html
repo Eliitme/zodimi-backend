@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stellune API console</title>
+<link rel="stylesheet" href="console.css">
+</head>
+<body>
+
+<header>
+  <h1>Stellune API console</h1>
+  <div id="status" class="status">
+    <span class="pill" id="pill-auth">signed out</span>
+    <span class="pill" id="pill-premium">free</span>
+    <span class="pill" id="pill-profile">no profile</span>
+    <span class="pill" id="pill-quota">draws 0 · qa 0</span>
+  </div>
+</header>
+
+<main>
+  <section class="panel">
+    <h2>1 · Session</h2>
+    <div class="row">
+      <button data-act="guest">Sign in as guest</button>
+      <button data-act="state" class="ghost">Refresh state</button>
+      <button data-act="signout" class="ghost">Sign out</button>
+    </div>
+    <div class="row">
+      <button data-act="premium-on">Grant premium</button>
+      <button data-act="premium-off" class="ghost">Revoke premium</button>
+      <button data-act="reset-quotas" class="ghost">Reset today's quotas</button>
+      <button data-act="reset-reports" class="ghost">Delete my reports</button>
+    </div>
+    <p class="hint">Guest sign-in uses Supabase anonymous auth, the same path the iOS app uses.
+      Premium and reset buttons are dev-only helpers (<code>DEV_TOOLS=true</code>).</p>
+  </section>
+
+  <section class="panel">
+    <h2>2 · Profile &amp; birthplace</h2>
+    <div class="grid">
+      <label>Name <input id="p-name" value="Console user"></label>
+      <label>Birth date <input id="p-date" type="date" value="1990-01-15"></label>
+      <label>Birth time <input id="p-time" type="time" value="10:30"></label>
+      <label class="check"><input id="p-unknown" type="checkbox"> Birth time unknown</label>
+    </div>
+    <div class="row">
+      <input id="p-place" value="Hà Nội" placeholder="Search birthplace" style="flex:1">
+      <button data-act="geocode">Geocode</button>
+    </div>
+    <div id="geocode-results" class="results"></div>
+    <div class="row">
+      <button data-act="save-profile">Save profile</button>
+      <span id="place-chosen" class="hint"></span>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>3 · Natal chart &amp; report</h2>
+    <div class="row">
+      <button data-act="chart">POST /charts/natal</button>
+      <button data-act="report">POST /reports/natal</button>
+      <button data-act="report-latest" class="ghost">GET /reports/natal/latest</button>
+      <button data-act="poll-report" class="ghost">Poll until done</button>
+    </div>
+    <p class="hint">The worker runs as its own compose service; if it is stopped,
+      run <code>docker compose exec api python -m app.jobs.natal_report_worker</code>.</p>
+  </section>
+
+  <section class="panel">
+    <h2>4 · Tarot</h2>
+    <div class="row">
+      <button data-act="draw">POST /tarot/draw</button>
+      <button data-act="draw" class="ghost">Draw again (quota)</button>
+    </div>
+    <div class="row">
+      <input id="q-input" placeholder="Ask the cards…" style="flex:1"
+             value="Hôm nay tôi nên tập trung vào điều gì?">
+      <button data-act="ask">Ask (SSE)</button>
+    </div>
+    <div class="row">
+      <button data-act="ask-crisis" class="ghost">Test crisis filter</button>
+      <button data-act="ask-injection" class="ghost">Test prompt injection</button>
+    </div>
+    <pre id="stream" class="stream"></pre>
+  </section>
+
+  <section class="panel">
+    <h2>5 · Synastry &amp; account</h2>
+    <div class="grid">
+      <label>Partner name <input id="s-name" value="Minh"></label>
+      <label>Birth date <input id="s-date" type="date" value="1993-07-11"></label>
+      <label>Birth time <input id="s-time" type="time" value="14:00"></label>
+      <label>Birthplace <input id="s-place" value="Hà Nội"></label>
+    </div>
+    <div class="row">
+      <button data-act="synastry">POST /synastry</button>
+      <button data-act="register-device" class="ghost">POST /devices</button>
+      <button data-act="iap-sync" class="ghost">POST /iap/sync</button>
+      <button data-act="delete-account" class="danger">DELETE /account</button>
+    </div>
+  </section>
+</main>
+
+<section class="panel log-panel">
+  <h2>Request log <button data-act="clear-log" class="ghost tiny">clear</button></h2>
+  <div id="log" class="log"></div>
+</section>
+
+<script type="module" src="api-client.js"></script>
+<script type="module" src="console.js"></script>
+</body>
+</html>

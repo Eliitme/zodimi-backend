@@ -25,6 +25,22 @@ docker compose up       # or: uv run uvicorn app.main:app --reload
 curl http://localhost:8000/health   # → {"status":"ok"}
 ```
 
+## Browser API console (local only)
+
+Set `DEV_TOOLS=true` in `.env`, restart, then open **http://localhost:8000/devtools/**.
+
+Every endpoint is reachable from one page: guest sign-in, profile + geocode,
+natal chart, report request/poll, tarot draw, SSE Q&A streaming, synastry,
+device registration, account deletion. Each call is logged with its raw
+response — 403 (premium gate) and 429 (quota) are the interesting cases, so
+they are displayed rather than swallowed.
+
+Dev-only helpers on the same page: grant/revoke premium, reset today's
+quotas, delete your reports. **They only exist while `DEV_TOOLS=true`** —
+with the flag off (the default, and what `.env.example` ships) the console
+and every `/v1/dev/*` route return 404. `tests/test_devtools_gating.py`
+pins that boundary.
+
 ## Auth convention (do not bypass)
 
 Every router is included under the `api` router in `app/main.py`, which applies

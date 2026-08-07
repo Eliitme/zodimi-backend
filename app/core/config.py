@@ -28,6 +28,11 @@ class Settings(BaseSettings):
     revenuecat_webhook_secret: str = ""
     revenuecat_api_key: str = ""
 
+    # Serves the browser test console at /devtools and enables the /v1/dev
+    # helper endpoints. MUST stay false in production — those helpers grant
+    # premium on demand.
+    dev_tools: bool = False
+
     # APNs token-based auth (.p8). Empty in dev → push calls become no-ops.
     apns_key_path: str = ""      # path to AuthKey_XXXXXXXXXX.p8 on the host
     apns_key_id: str = ""

@@ -1,0 +1,154 @@
+:root {
+  color-scheme: dark;
+  --bg: #14131a;
+  --panel: #1d1b26;
+  --line: #322e40;
+  --text: #e9e6f2;
+  --muted: #9b93b0;
+  --accent: #a78bfa;
+  --ok: #4ade80;
+  --warn: #fbbf24;
+  --err: #f87171;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 20px;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.5 ui-sans-serif, -apple-system, "Segoe UI", sans-serif;
+}
+
+header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+h1 { font-size: 18px; margin: 0; }
+h2 { font-size: 14px; margin: 0 0 12px; color: var(--accent); font-weight: 600; }
+
+.status { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.pill {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #2a2735;
+  border: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--muted);
+}
+.pill.on { color: var(--ok); border-color: #2f5d43; }
+.pill.off { color: var(--muted); }
+
+main {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 14px;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+label.check { flex-direction: row; align-items: center; gap: 6px; }
+
+input {
+  background: #14131a;
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 7px 9px;
+  font: inherit;
+}
+input:focus { outline: 1px solid var(--accent); }
+
+button {
+  background: var(--accent);
+  color: #1b1626;
+  border: 0;
+  border-radius: 6px;
+  padding: 7px 12px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+button:hover { filter: brightness(1.1); }
+button:disabled { opacity: .45; cursor: not-allowed; }
+button.ghost { background: transparent; color: var(--text); border: 1px solid var(--line); font-weight: 500; }
+button.danger { background: transparent; color: var(--err); border: 1px solid #5a2b2b; font-weight: 500; }
+button.tiny { padding: 2px 8px; font-size: 11px; }
+
+.hint { color: var(--muted); font-size: 12px; margin: 6px 0 0; }
+.hint code { background: #14131a; padding: 1px 5px; border-radius: 4px; }
+
+.results { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+.results button {
+  background: #14131a;
+  border: 1px solid var(--line);
+  color: var(--text);
+  text-align: left;
+  font-weight: 400;
+  font-size: 12px;
+}
+.results button.chosen { border-color: var(--accent); color: var(--accent); }
+
+.stream {
+  background: #14131a;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 10px;
+  min-height: 60px;
+  max-height: 220px;
+  overflow: auto;
+  white-space: pre-wrap;
+  font: 12px/1.6 ui-monospace, monospace;
+  margin: 0;
+}
+
+.log-panel { margin-top: 14px; }
+.log-panel h2 { display: flex; align-items: center; gap: 10px; }
+
+/* Entries are prepended, so plain column order already puts the newest
+   first — column-reverse here would flip it back to oldest-first. */
+.log { max-height: 420px; overflow: auto; display: flex; flex-direction: column; gap: 8px; }
+
+.entry { border-left: 3px solid var(--line); padding: 6px 0 6px 10px; }
+.entry.ok { border-color: var(--ok); }
+.entry.warn { border-color: var(--warn); }
+.entry.err { border-color: var(--err); }
+
+.entry-head { display: flex; gap: 8px; align-items: baseline; font-size: 12px; }
+.entry-head .code { font-weight: 700; }
+.entry-head .path { font-family: ui-monospace, monospace; color: var(--muted); }
+.entry-head .ms { color: var(--muted); margin-left: auto; }
+
+.entry pre {
+  margin: 6px 0 0;
+  padding: 8px;
+  background: #14131a;
+  border-radius: 6px;
+  max-height: 260px;
+  overflow: auto;
+  font: 11px/1.5 ui-monospace, monospace;
+  white-space: pre-wrap;
+  color: var(--muted);
+}

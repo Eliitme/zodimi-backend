@@ -16,6 +16,9 @@ FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 WORKDIR /srv/app
 COPY --from=builder /srv/app/.venv ./.venv
 COPY app ./app
+# Static assets for the /devtools console — only mounted when DEV_TOOLS=true,
+# so this is inert in production images.
+COPY devtools ./devtools
 
 ENV PATH="/srv/app/.venv/bin:$PATH"
 
