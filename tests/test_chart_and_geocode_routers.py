@@ -35,6 +35,12 @@ def test_reports_require_auth():
     assert client.get(
         "/v1/reports/natal/00000000-0000-0000-0000-000000000000"
     ).status_code == 401
+    assert client.get("/v1/reports/natal/latest").status_code == 401
+
+
+def test_tarot_requires_auth():
+    assert client.post("/v1/tarot/draw").status_code == 401
+    assert client.post("/v1/tarot/ask", json={"question": "hi"}).status_code == 401
 
 
 def test_geocode_requires_auth():

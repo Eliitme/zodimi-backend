@@ -1,4 +1,4 @@
-"""Natal report request/read endpoints (thin CRUD).
+"""Natal report request/read endpoints.
 
 Content generation is the AI pipeline's job (worker picks up `queued` rows);
 these endpoints only create and read rows. Service-role DB access bypasses
@@ -6,8 +6,8 @@ RLS, so BOTH handlers scope every query by the authenticated user id —
 reading another user's report must be indistinguishable from it not
 existing (404).
 
-TODO (AI pipeline phase): premium-gate report creation + rate limit before
-the worker starts burning LLM budget.
+Creation is premium-gated (~10 LLM calls per report) and capped per day
+against retry storms.
 """
 
 from uuid import UUID
@@ -16,11 +16,15 @@ from fastapi import APIRouter, HTTPException, Request, status
 from postgrest.exceptions import APIError
 from pydantic import BaseModel
 
+from app.core.entitlements import is_premium, utc_today
 from app.core.supabase_client import get_service_client
 
 router = APIRouter(prefix="/reports", tags=["reports"])
 
 ACTIVE_STATUSES = ("queued", "generating")
+# Retry-storm guard: new rows only appear after failures, so a handful/day
+# is generous for legitimate use.
+DAILY_REPORT_CAP = 5
 
 
 class ReportStatusResponse(BaseModel):
@@ -36,6 +40,22 @@ def request_natal_report(request: Request) -> ReportStatusResponse:
     user_id: str = request.state.user_id
     service = get_service_client()
 
+    if not is_premium(user_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="The in-depth report is a premium feature",
+        )
+    requested_today = (
+        service.table("natal_reports").select("id", count="exact")
+        .eq("user_id", user_id).gte("requested_at", f"{utc_today()}T00:00:00Z")
+        .execute().count or 0
+    )
+    if requested_today >= DAILY_REPORT_CAP:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Daily report limit reached — please try again tomorrow",
+        )
+
     profile = (
         service.table("profiles").select("birth_date").eq("user_id", user_id)
         .limit(1).execute().data
@@ -48,7 +68,7 @@ def request_natal_report(request: Request) -> ReportStatusResponse:
 
     # Reports are expensive to generate: an existing active OR done report
     # is returned instead of queuing a duplicate. Explicit "regenerate"
-    # semantics (e.g. after birth data changes) are the AI phase's call.
+    # semantics (e.g. after birth data changes) are a later product call.
     existing = (
         service.table("natal_reports").select("*").eq("user_id", user_id)
         .neq("status", "failed")
@@ -66,10 +86,17 @@ def request_natal_report(request: Request) -> ReportStatusResponse:
         # one account): the other request created the row — return it.
         if exc.code != "23505":
             raise
-        row = (
+        rows = (
             service.table("natal_reports").select("*").eq("user_id", user_id)
-            .in_("status", ACTIVE_STATUSES).limit(1).execute().data[0]
+            .neq("status", "failed")
+            .order("requested_at", desc=True).limit(1).execute().data
         )
+        if not rows:  # concurrent row failed in the same instant — retry once
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Please retry the request",
+            )
+        row = rows[0]
     return ReportStatusResponse(**row)
 
 

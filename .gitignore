@@ -21,3 +21,6 @@ supabase/.branches/
 .DS_Store
 .idea/
 .vscode/
+
+# Private prompt templates (public repo — keep prompts out)
+prompts/*.local.json

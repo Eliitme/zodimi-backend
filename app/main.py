@@ -12,6 +12,7 @@ from app.api.auth_router import router as auth_router
 from app.api.charts_router import router as charts_router
 from app.api.geocode_router import router as geocode_router
 from app.api.reports_router import router as reports_router
+from app.api.tarot_router import router as tarot_router
 from app.core.auth import require_user
 
 app = FastAPI(title="Stellune API", version="0.1.0")
@@ -22,6 +23,7 @@ api.include_router(auth_router)
 api.include_router(charts_router)
 api.include_router(geocode_router)
 api.include_router(reports_router)
+api.include_router(tarot_router)
 
 
 @public.get("/health")

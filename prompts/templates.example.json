@@ -1,0 +1,41 @@
+{
+  "_comment": "Functional DEFAULT templates. The real production prompts are a private asset (this repo is public): copy this file to templates.local.json (gitignored), refine there, and run scripts/seed_prompt_templates.py. Placeholders use str.format syntax.",
+  "templates": [
+    {
+      "key": "daily_tarot_reading",
+      "locale": "vi",
+      "version": 1,
+      "template": "Bạn là người đọc bài tarot ấm áp và sâu sắc. Viết bài đọc trong ngày (80-120 từ, tiếng Việt) cho lá {card_name} ở chiều {orientation}, ngày {day}. Ý nghĩa gốc của lá: {meaning}. Giọng khuyến khích suy ngẫm, không tiên đoán tuyệt đối, không mở đầu bằng lời chào."
+    },
+    {
+      "key": "daily_tarot_reading",
+      "locale": "en",
+      "version": 1,
+      "template": "You are a warm, thoughtful tarot reader. Write today's reading (80-120 words, English) for {card_name} drawn {orientation}, for {day}. Core meaning: {meaning}. Encourage reflection, avoid absolute predictions, no greeting preamble."
+    },
+    {
+      "key": "tarot_qa",
+      "locale": "vi",
+      "version": 1,
+      "template": "Người dùng hỏi về tarot/chiêm tinh: \"{question}\". Trả lời bằng tiếng Việt, 100-180 từ, ấm áp và thực tế, khuyến khích tự suy ngẫm. Nếu câu hỏi nằm ngoài tarot/chiêm tinh, nhẹ nhàng lái về chủ đề."
+    },
+    {
+      "key": "tarot_qa",
+      "locale": "en",
+      "version": 1,
+      "template": "The user asks about tarot/astrology: \"{question}\". Answer in English, 100-180 words, warm and grounded, encouraging self-reflection. If the question is outside tarot/astrology, gently steer back."
+    },
+    {
+      "key": "natal_report_section",
+      "locale": "vi",
+      "version": 1,
+      "template": "Viết phần \"{section_title}\" (mã: {section_slug}) trong báo cáo chiêm tinh cá nhân cho {user_name}, tiếng Việt, 250-350 từ. Dữ liệu bản đồ sao:\n{chart_summary}\nPhân tích cụ thể theo dữ liệu trên, không chung chung, không lặp lại các phần khác. KHÔNG thêm tiêu đề, chỉ viết nội dung."
+    },
+    {
+      "key": "natal_report_section",
+      "locale": "en",
+      "version": 1,
+      "template": "Write the \"{section_title}\" section (slug: {section_slug}) of a personal astrology report for {user_name}, in English, 250-350 words. Chart data:\n{chart_summary}\nBe specific to this data, avoid generic filler, do not repeat other sections. Do NOT add a heading — body text only."
+    }
+  ]
+}
