@@ -25,7 +25,9 @@ def _get_jwks_client() -> PyJWKClient:
     return _jwks_client
 
 
-def _decode_token(token: str) -> dict:
+def decode_token(token: str) -> dict:
+    """Verify a Supabase JWT and return its claims. Public because the
+    guest-merge endpoint also verifies a second (guest) token."""
     settings = get_settings()
     if settings.supabase_jwt_secret:
         # Local dev / legacy projects sign with a shared HS256 secret.
@@ -56,7 +58,7 @@ def require_user(
             detail="Missing bearer token",
         )
     try:
-        claims = _decode_token(credentials.credentials)
+        claims = decode_token(credentials.credentials)
     except jwt.PyJWKClientConnectionError:
         # Auth-server outage is not the caller's fault — a 401 here would
         # make clients wrongly sign the user out.
