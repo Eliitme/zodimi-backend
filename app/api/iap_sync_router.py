@@ -13,7 +13,8 @@ from pydantic import BaseModel
 
 from app.core.supabase_client import get_service_client
 from app.revenuecat.revenuecat_client import (
-    RevenueCatNotConfiguredError, subscriber_has_premium,
+    RevenueCatNotConfiguredError,
+    subscriber_has_premium,
 )
 
 logger = logging.getLogger("stellune.iap")

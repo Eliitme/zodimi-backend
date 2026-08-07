@@ -18,10 +18,16 @@ from app.ai import content_cache
 from app.ai.llm_provider import LLMUnavailableError, get_provider
 from app.ai.prompt_repository import render
 from app.ai.safety_guardrails import (
-    append_disclaimer, crisis_response, detect_self_harm, system_rules,
+    append_disclaimer,
+    crisis_response,
+    detect_self_harm,
+    system_rules,
 )
 from app.core.entitlements import (
-    QA_DAILY_LIMIT, is_premium, qa_questions_used_today, utc_today,
+    QA_DAILY_LIMIT,
+    is_premium,
+    qa_questions_used_today,
+    utc_today,
 )
 from app.core.supabase_client import get_service_client
 from app.jobs.daily_tarot_pregen_job import CONTENT_TYPE, cache_key

@@ -1,0 +1,21 @@
+# Stellune background jobs — install on the VPS with:
+#   crontab -l | cat - deploy/crontab.example | crontab -
+# Adjust APP_DIR to where docker-compose.yml lives.
+#
+# Every entry logs to a file: without this there is no way to tell whether a
+# job ran, and the crontab itself never reports failures.
+
+APP_DIR=/srv/stellune-backend
+LOG_DIR=/var/log/stellune
+
+# Tomorrow's daily tarot content (00:00 UTC, ahead of any timezone's morning)
+0 0 * * * cd $APP_DIR && docker compose exec -T api python -m app.jobs.daily_tarot_pregen_job >> $LOG_DIR/pregen.log 2>&1
+
+# Re-queue natal reports abandoned by a killed worker
+*/5 * * * * cd $APP_DIR && docker compose exec -T api python -m app.jobs.stale_report_watchdog >> $LOG_DIR/watchdog.log 2>&1
+
+# Daily card push — hourly, sends to whichever timezones are at 08:00
+0 * * * * cd $APP_DIR && docker compose exec -T api python -m app.jobs.daily_push_job >> $LOG_DIR/push.log 2>&1
+
+# Alarm for jobs that stopped running (exits non-zero → cron emails MAILTO)
+30 * * * * cd $APP_DIR && docker compose exec -T api python -m app.jobs.job_health_check >> $LOG_DIR/health.log 2>&1

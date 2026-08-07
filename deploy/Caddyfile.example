@@ -1,0 +1,33 @@
+# Reverse proxy + automatic TLS for the API (NFR: HTTPS only).
+# Caddy over nginx+certbot: certificates renew themselves with no cron entry
+# and no renewal failure mode to monitor.
+#
+# Install on the VPS at /etc/caddy/Caddyfile, then: systemctl reload caddy
+
+api.stellune.app {
+	reverse_proxy 127.0.0.1:8000
+
+	# The RevenueCat webhook authenticates with its own secret, so it must
+	# stay reachable — everything else is JWT-guarded by the app itself.
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		-Server
+	}
+
+	log {
+		output file /var/log/caddy/api.log
+		format json
+	}
+}
+
+# Legal documents must live at a stable public URL before App Store
+# submission (Apple blocks review without them) and are linked from the
+# paywall and Settings.
+stellune.app {
+	handle_path /legal/* {
+		root * /srv/stellune-legal
+		file_server
+	}
+	redir / https://apps.apple.com/app/stellune permanent
+}

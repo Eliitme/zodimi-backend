@@ -4,7 +4,6 @@ are OURS (model-provided headings are stripped) so paid sections never
 shift into the free preview.
 """
 
-from datetime import date, time
 
 import pytest
 

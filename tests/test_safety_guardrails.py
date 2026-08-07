@@ -6,7 +6,10 @@ and run as a manual gate before release.
 import pytest
 
 from app.ai.safety_guardrails import (
-    append_disclaimer, crisis_response, detect_self_harm, system_rules,
+    append_disclaimer,
+    crisis_response,
+    detect_self_harm,
+    system_rules,
 )
 
 SELF_HARM_POSITIVE = [

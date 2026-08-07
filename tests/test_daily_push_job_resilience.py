@@ -21,7 +21,9 @@ class FakeTable:
 
     def select(self, *_args, **_kwargs): return self
     def order(self, *_args, **_kwargs): return self
-    def eq(self, _col, value): self._id = value; return self
+    def eq(self, _col, value):
+        self._id = value
+        return self
 
     def range(self, start, end):
         self._range = (start, end)

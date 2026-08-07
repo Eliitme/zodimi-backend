@@ -81,7 +81,9 @@ def run(now_utc: datetime | None = None) -> int:
     results = send_batch_sync(messages)
 
     sent, failures = 0, 0
-    for device, result in zip(due, results):
+    # strict: a length mismatch means a send was silently dropped — better
+    # to fail loudly than to mark the wrong device as pushed.
+    for device, result in zip(due, results, strict=True):
         # One bad device must not abort the rest of this hour's bucket —
         # the skipped ones would fall outside the push hour by the next run
         # and lose the whole day.

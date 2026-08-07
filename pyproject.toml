@@ -23,8 +23,25 @@ dependencies = [
 dev = [
     "pytest>=8",
     "httpx>=0.27",
+    "ruff>=0.16.1",
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+# Pragmatic set: real bugs + import hygiene, not formatting opinions
+# (the project prioritises readability over strict style enforcement).
+select = ["E4", "E7", "E9", "F", "I", "B", "UP"]
+ignore = [
+    "E402",  # sys.path setup before imports in scripts
+    "B008",  # FastAPI Depends() in defaults is the framework idiom
+    # HTTPException raised inside except blocks is a deliberate translation
+    # of an internal error into a user-facing one; chaining the original
+    # adds nothing for the client and risks leaking internals in tracebacks.
+    "B904",
+]

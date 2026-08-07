@@ -7,7 +7,7 @@ Token usage is logged per call (counts only, never prompt/PII contents).
 
 import logging
 import time
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import Iterator
 from functools import lru_cache
 from typing import Protocol
 

@@ -119,6 +119,6 @@ def notify_report_ready(user_id: str, locale: str) -> None:
         title, body = REPORT_READY.get(device.get("locale") or locale, REPORT_READY["en"])
         messages.append((device["apns_token"], title, body))
 
-    for device, result in zip(devices, send_batch_sync(messages)):
+    for device, result in zip(devices, send_batch_sync(messages), strict=True):
         if result.token_is_dead:
             service.table("devices").delete().eq("id", device["id"]).execute()

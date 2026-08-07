@@ -1,9 +1,10 @@
 """Natal chart endpoint. Auth comes from the parent `api` router (P1
 convention) — do not add router-level auth here."""
 
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
 from fastapi import APIRouter, HTTPException, status
 from kerykeion import KerykeionException
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from app.astro.aspect_calculator import calculate_major_aspects
 from app.astro.chart_calculator import build_subject, calculate_natal_chart
