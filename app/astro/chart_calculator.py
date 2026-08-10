@@ -118,6 +118,17 @@ def calculate_natal_chart(
                 "sign": SIGN_NAMES[subject.medium_coeli.sign],
                 "degree": round(subject.medium_coeli.position, 4),
             },
+            # Exactly opposite asc/mc, but returned rather than derived on
+            # the client: two clients each doing +180° with a wraparound is
+            # two chances to get it wrong, and the ephemeris already has them.
+            "dsc": {
+                "sign": SIGN_NAMES[subject.descendant.sign],
+                "degree": round(subject.descendant.position, 4),
+            },
+            "ic": {
+                "sign": SIGN_NAMES[subject.imum_coeli.sign],
+                "degree": round(subject.imum_coeli.position, 4),
+            },
         },
         # A missing birth time is treated as unknown even if the flag says
         # otherwise — the chart was computed with the noon fallback, so

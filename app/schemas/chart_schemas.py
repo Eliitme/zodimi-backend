@@ -50,6 +50,10 @@ class AnglePosition(BaseModel):
 class Angles(BaseModel):
     asc: AnglePosition
     mc: AnglePosition
+    # The opposite ends of the same two axes. Optional so a chart stored
+    # before they shipped still decodes.
+    dsc: AnglePosition | None = None
+    ic: AnglePosition | None = None
 
 
 class BalanceContribution(BaseModel):

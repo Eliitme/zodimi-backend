@@ -157,6 +157,25 @@
         "cusp_degree": 25.209
       }
     ],
+    "angles": {
+      "asc": {
+        "sign": "virgo",
+        "degree": 22.2913
+      },
+      "mc": {
+        "sign": "gemini",
+        "degree": 21.3151
+      },
+      "dsc": {
+        "sign": "pisces",
+        "degree": 22.2913
+      },
+      "ic": {
+        "sign": "sagittarius",
+        "degree": 21.3151
+      }
+    },
+    "time_unknown": false,
     "aspects": [
       {
         "p1": "sun",
@@ -309,17 +328,6 @@
         "orb": 0.98
       }
     ],
-    "angles": {
-      "asc": {
-        "sign": "virgo",
-        "degree": 22.2913
-      },
-      "mc": {
-        "sign": "gemini",
-        "degree": 21.3151
-      }
-    },
-    "time_unknown": false,
     "metrics": {
       "elements": {
         "scores": {

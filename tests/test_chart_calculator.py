@@ -18,6 +18,11 @@ from app.astro.chart_metrics import compute_metrics
 
 FIXTURE_PATH = Path(__file__).parent / "fixtures" / "natal-chart-fixture.json"
 
+ZODIAC = [
+    "aries", "taurus", "gemini", "cancer", "leo", "virgo",
+    "libra", "scorpio", "sagittarius", "capricorn", "aquarius", "pisces",
+]
+
 JOBS_BIRTH = dict(
     birth_date=date(1955, 2, 24),
     birth_time=time(19, 15),
@@ -126,3 +131,29 @@ def test_shared_ios_fixture_is_current(jobs_chart):
     expected = {**jobs_chart, "aspects": calculate_major_aspects(subject)}
     expected["metrics"] = compute_metrics(expected)
     assert fixture["response"] == expected
+
+
+class TestOppositeAngles:
+    """Descendant and Imum Coeli come from the ephemeris rather than being
+    derived client-side: two clients each doing +180° with a wraparound is
+    two chances to get it wrong."""
+
+    def test_descendant_is_opposite_the_ascendant(self, jobs_chart):
+        angles = jobs_chart["angles"]
+        asc = ZODIAC.index(angles["asc"]["sign"]) * 30 + angles["asc"]["degree"]
+        dsc = ZODIAC.index(angles["dsc"]["sign"]) * 30 + angles["dsc"]["degree"]
+        assert abs((dsc - asc) % 360 - 180) < 0.01
+
+    def test_ic_is_opposite_the_midheaven(self, jobs_chart):
+        angles = jobs_chart["angles"]
+        mc = ZODIAC.index(angles["mc"]["sign"]) * 30 + angles["mc"]["degree"]
+        ic = ZODIAC.index(angles["ic"]["sign"]) * 30 + angles["ic"]["degree"]
+        assert abs((ic - mc) % 360 - 180) < 0.01
+
+    def test_opposite_angles_share_the_degree_within_their_sign(self, jobs_chart):
+        # Opposite points sit at the same degree of opposite signs; a sign
+        # table that was off by one would break this while the arithmetic
+        # above still passed.
+        angles = jobs_chart["angles"]
+        assert angles["asc"]["degree"] == pytest.approx(angles["dsc"]["degree"], abs=0.01)
+        assert angles["mc"]["degree"] == pytest.approx(angles["ic"]["degree"], abs=0.01)
