@@ -16,7 +16,9 @@ from fastapi import APIRouter, HTTPException, Request, status
 from postgrest.exceptions import APIError
 from pydantic import BaseModel
 
+from app.ai.safety_guardrails import append_disclaimer
 from app.core.entitlements import is_premium, utc_today
+from app.core.locale import request_locale
 from app.core.supabase_client import get_service_client
 
 router = APIRouter(prefix="/reports", tags=["reports"])
@@ -39,6 +41,18 @@ class ReportStatusResponse(BaseModel):
     # Titles of sections withheld server-side for non-premium users. The
     # client renders these as locked rows — it never receives their text.
     locked_section_titles: list[str] | None = None
+
+
+def _with_disclaimer(row: dict, locale: str) -> dict:
+    """FR11's output post-filter, applied on read rather than on generation.
+
+    Baking it into the stored content would put it after the last section,
+    where `_gate_content` truncates it away for exactly the free-tier readers
+    who most need it. Applying it here means both tiers get it.
+    """
+    if not row.get("content"):
+        return row
+    return {**row, "content": append_disclaimer(row["content"], locale)}
 
 
 def _gate_content(row: dict, user_id: str) -> dict:
@@ -139,7 +153,9 @@ def get_latest_natal_report(request: Request) -> ReportStatusResponse:
     )
     if not rows:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No report yet")
-    return ReportStatusResponse(**_gate_content(rows[0], user_id))
+    return ReportStatusResponse(
+        **_with_disclaimer(_gate_content(rows[0], user_id), request_locale(request))
+    )
 
 
 @router.get("/natal/{report_id}", response_model=ReportStatusResponse)
@@ -153,4 +169,6 @@ def get_natal_report(request: Request, report_id: UUID) -> ReportStatusResponse:
     )
     if not rows:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Report not found")
-    return ReportStatusResponse(**_gate_content(rows[0], user_id))
+    return ReportStatusResponse(
+        **_with_disclaimer(_gate_content(rows[0], user_id), request_locale(request))
+    )

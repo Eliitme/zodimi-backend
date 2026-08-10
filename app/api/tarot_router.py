@@ -29,6 +29,7 @@ from app.core.entitlements import (
     qa_questions_used_today,
     utc_today,
 )
+from app.core.locale import request_locale
 from app.core.supabase_client import get_service_client
 from app.jobs.daily_tarot_pregen_job import CONTENT_TYPE, cache_key
 
@@ -49,9 +50,7 @@ class AskRequest(BaseModel):
     question: str = Field(min_length=1, max_length=500)
 
 
-def _locale(request: Request) -> str:
-    lang = (request.headers.get("Accept-Language") or "en")[:2].lower()
-    return "vi" if lang == "vi" else "en"
+_locale = request_locale
 
 
 def _reading_for(card: dict, is_reversed: bool, day: str, locale: str) -> str:
