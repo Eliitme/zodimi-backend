@@ -1,7 +1,8 @@
 """LLM abstraction — the rest of the codebase never imports a vendor SDK.
 
-Provider selection: Gemini Flash when GEMINI_API_KEY is set, otherwise the
-deterministic FakeProvider (local dev / CI — no key, no cost, no network).
+Provider selection, in order: OpenRouter when OPENROUTER_API_KEY is set,
+then Gemini Flash when GEMINI_API_KEY is set, otherwise the deterministic
+FakeProvider (local dev / CI — no key, no cost, no network).
 Token usage is logged per call (counts only, never prompt/PII contents).
 """
 
@@ -16,6 +17,7 @@ from app.core.config import get_settings
 logger = logging.getLogger("stellune.llm")
 
 GEMINI_MODEL = "gemini-2.5-flash"
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 REQUEST_TIMEOUT_S = 60
 MAX_RETRIES = 2
 
@@ -75,6 +77,78 @@ class GeminiFlashProvider:
             raise LLMUnavailableError(str(exc))
 
 
+class OpenRouterProvider:
+    """OpenRouter behind the OpenAI-compatible SDK.
+
+    One key reaches Anthropic, OpenAI, Google and open models, so the model
+    is an env var rather than a code change — which is what makes an A/B on
+    real Vietnamese output cheap.
+
+    The official SDK parses the streaming response for us on purpose: SSE
+    parsing is exactly where this codebase has been bitten before, and a
+    hand-rolled reader would have to get chunk splitting and the terminal
+    sentinel right for no benefit.
+    """
+
+    def __init__(self, api_key: str, model: str):
+        from openai import OpenAI
+
+        self._model = model
+        self._client = OpenAI(
+            api_key=api_key,
+            base_url=OPENROUTER_BASE_URL,
+            timeout=REQUEST_TIMEOUT_S,
+            # Attribution shown on OpenRouter's dashboard; no PII.
+            default_headers={"X-Title": "Stellune"},
+        )
+
+    def _messages(self, system: str, prompt: str) -> list[dict[str, str]]:
+        return [
+            {"role": "system", "content": system},
+            {"role": "user", "content": prompt},
+        ]
+
+    def generate(self, system: str, prompt: str) -> str:
+        last_error: Exception | None = None
+        for attempt in range(MAX_RETRIES + 1):
+            if attempt:
+                # Same backoff reasoning as the Gemini path: immediate
+                # retries just burn the rate limit.
+                time.sleep(2 ** attempt)
+            try:
+                started = time.monotonic()
+                response = self._client.chat.completions.create(
+                    model=self._model, messages=self._messages(system, prompt)
+                )
+                usage = response.usage
+                logger.info(
+                    "llm generate ok model=%s in=%s out=%s elapsed=%.1fs",
+                    self._model,
+                    getattr(usage, "prompt_tokens", "?"),
+                    getattr(usage, "completion_tokens", "?"),
+                    time.monotonic() - started,
+                )
+                return response.choices[0].message.content or ""
+            except Exception as exc:
+                last_error = exc
+                logger.warning("llm generate attempt %d failed: %s", attempt + 1, exc)
+        raise LLMUnavailableError(str(last_error))
+
+    def stream(self, system: str, prompt: str) -> Iterator[str]:
+        try:
+            stream = self._client.chat.completions.create(
+                model=self._model, messages=self._messages(system, prompt), stream=True
+            )
+            for chunk in stream:
+                if not chunk.choices:
+                    continue
+                text = chunk.choices[0].delta.content
+                if text:
+                    yield text
+        except Exception as exc:
+            raise LLMUnavailableError(str(exc))
+
+
 class FakeProvider:
     """Deterministic stand-in when no API key is configured. Output shape
     honours the report contract (starts with '## ') so every downstream
@@ -96,7 +170,10 @@ class LLMUnavailableError(RuntimeError):
 @lru_cache
 def get_provider() -> LLMProvider:
     settings = get_settings()
+    if settings.openrouter_api_key:
+        logger.info("using OpenRouter model=%s", settings.openrouter_model)
+        return OpenRouterProvider(settings.openrouter_api_key, settings.openrouter_model)
     if settings.gemini_api_key:
         return GeminiFlashProvider(settings.gemini_api_key)
-    logger.warning("GEMINI_API_KEY empty — using FakeProvider (dev mode)")
+    logger.warning("no LLM key set — using FakeProvider (dev mode)")
     return FakeProvider()

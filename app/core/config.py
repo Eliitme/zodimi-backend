@@ -21,7 +21,14 @@ class Settings(BaseSettings):
     # stack and new cloud projects sign with asymmetric keys).
     supabase_jwt_secret: str = ""
 
-    # AI provider (used from Phase 3 onward)
+    # AI provider (used from Phase 3 onward). OpenRouter wins when both are
+    # set — it reaches many models behind one key, which is how models get
+    # compared on real Vietnamese output rather than on benchmarks.
+    openrouter_api_key: str = ""
+    # Defaults to the same model the direct Gemini path used, so switching to
+    # OpenRouter changes the route without silently changing cost or writing
+    # style. Swap this to A/B another model; no code change needed.
+    openrouter_model: str = "google/gemini-2.5-flash"
     gemini_api_key: str = ""
 
     # RevenueCat (used from Phase 7 onward)
