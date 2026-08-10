@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field
 from app.ai.llm_provider import LLMUnavailableError, get_provider
 from app.ai.prompt_repository import render
 from app.ai.safety_guardrails import append_disclaimer, system_rules
+from app.ai.section_format import normalise_sections
 from app.astro.aspect_calculator import calculate_synastry_aspects
 from app.astro.chart_calculator import build_subject
 from app.core.entitlements import is_premium
@@ -26,6 +27,25 @@ router = APIRouter(prefix="/synastry", tags=["synastry"])
 
 # Every reading is an LLM call — same cost-gate convention as reports/Q&A.
 DAILY_SYNASTRY_CAP = 5
+
+# Synastry used to answer with one undivided block. Readers skim for the
+# question they actually came with — "do we argue well?" — and a wall of
+# prose makes them hunt for it. These are the pair's own dynamics, not one
+# person's relational style across contexts.
+#
+# All five come back in ONE model call: this endpoint answers synchronously,
+# and five sequential calls would take a paid request past a minute.
+SYNASTRY_SECTIONS = [
+    ("overview", "Tổng quan", "Overview"),
+    ("attraction", "Sức hút & hoà hợp", "Attraction & chemistry"),
+    ("communication", "Giao tiếp & thấu hiểu", "Communication & understanding"),
+    ("friction", "Xung đột & cách hoà giải", "Friction & repair"),
+    ("long_term", "Đường dài", "The long run"),
+]
+
+
+def _section_titles(locale: str) -> list[str]:
+    return [vi if locale == "vi" else en for _, vi, en in SYNASTRY_SECTIONS]
 
 
 class PartnerInput(BirthData):
@@ -97,14 +117,16 @@ def create_synastry(request: Request, partner: PartnerInput) -> SynastryResult:
 
     aspect_lines = "\n".join(f"{a['p1']} {a['type']} {a['p2']} (orb {a['orb']})" for a in aspects)
     try:
+        titles = _section_titles(locale)
         prompt = render(
             "synastry", locale,
             partner_name=partner.name or "",
             aspects=aspect_lines,
+            sections="\n".join(f"## {t}" for t in titles),
         )
-        interpretation = append_disclaimer(
-            get_provider().generate(system_rules(locale), prompt), locale
-        )
+        raw = get_provider().generate(system_rules(locale), prompt)
+        # Impose our headings so clients can split on them reliably.
+        interpretation = append_disclaimer(normalise_sections(raw, titles), locale)
     except LLMUnavailableError:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
