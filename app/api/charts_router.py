@@ -8,6 +8,7 @@ from kerykeion import KerykeionException
 
 from app.astro.aspect_calculator import calculate_major_aspects
 from app.astro.chart_calculator import build_subject, calculate_natal_chart
+from app.astro.chart_metrics import compute_metrics
 from app.schemas.chart_schemas import BirthData, NatalChartResponse
 
 router = APIRouter(prefix="/charts", tags=["charts"])
@@ -39,6 +40,10 @@ def natal_chart(body: BirthData) -> NatalChartResponse:
             body.lat, body.lon, body.tz_of_birth,
         )
         chart["aspects"] = calculate_major_aspects(subject)
+        # After aspects, not before: the aspect mix is part of the
+        # metrics, and pure arithmetic besides — it rides along rather
+        # than costing the client a second request.
+        chart["metrics"] = compute_metrics(chart)
     except KerykeionException as exc:
         # Backstop for input the schema bounds can't anticipate — the
         # message is actionable ("ambiguous time", "no ephemeris data", ...).

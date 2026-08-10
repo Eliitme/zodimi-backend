@@ -106,7 +106,7 @@ def calculate_natal_chart(
             "cusp_degree": round(h.position, 4),
         })
 
-    return {
+    chart = {
         "planets": planets,
         "houses": houses,
         "angles": {
@@ -124,3 +124,4 @@ def calculate_natal_chart(
         # Asc/MC/houses must never be presented as reliable.
         "time_unknown": bool(birth_time_unknown or birth_time is None),
     }
+    return chart

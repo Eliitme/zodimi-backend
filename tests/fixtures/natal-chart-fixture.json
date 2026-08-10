@@ -157,17 +157,6 @@
         "cusp_degree": 25.209
       }
     ],
-    "angles": {
-      "asc": {
-        "sign": "virgo",
-        "degree": 22.2913
-      },
-      "mc": {
-        "sign": "gemini",
-        "degree": 21.3151
-      }
-    },
-    "time_unknown": false,
     "aspects": [
       {
         "p1": "sun",
@@ -319,6 +308,251 @@
         "type": "square",
         "orb": 0.98
       }
-    ]
+    ],
+    "angles": {
+      "asc": {
+        "sign": "virgo",
+        "degree": 22.2913
+      },
+      "mc": {
+        "sign": "gemini",
+        "degree": 21.3151
+      }
+    },
+    "time_unknown": false,
+    "metrics": {
+      "elements": {
+        "scores": {
+          "water": 7.0,
+          "fire": 6.0,
+          "air": 4.5,
+          "earth": 5.0
+        },
+        "percent": {
+          "water": 31,
+          "fire": 27,
+          "air": 20,
+          "earth": 22
+        },
+        "dominant": "water",
+        "missing": [],
+        "contributions": [
+          {
+            "body": "sun",
+            "sign": "pisces",
+            "group": "water",
+            "weight": 3.0
+          },
+          {
+            "body": "moon",
+            "sign": "aries",
+            "group": "fire",
+            "weight": 3.0
+          },
+          {
+            "body": "mercury",
+            "sign": "aquarius",
+            "group": "air",
+            "weight": 2.0
+          },
+          {
+            "body": "venus",
+            "sign": "capricorn",
+            "group": "earth",
+            "weight": 2.0
+          },
+          {
+            "body": "mars",
+            "sign": "aries",
+            "group": "fire",
+            "weight": 2.0
+          },
+          {
+            "body": "jupiter",
+            "sign": "cancer",
+            "group": "water",
+            "weight": 1.5
+          },
+          {
+            "body": "saturn",
+            "sign": "scorpio",
+            "group": "water",
+            "weight": 1.5
+          },
+          {
+            "body": "uranus",
+            "sign": "cancer",
+            "group": "water",
+            "weight": 1.0
+          },
+          {
+            "body": "neptune",
+            "sign": "libra",
+            "group": "air",
+            "weight": 1.0
+          },
+          {
+            "body": "pluto",
+            "sign": "leo",
+            "group": "fire",
+            "weight": 1.0
+          },
+          {
+            "body": "ascendant",
+            "sign": "virgo",
+            "group": "earth",
+            "weight": 3.0
+          },
+          {
+            "body": "midheaven",
+            "sign": "gemini",
+            "group": "air",
+            "weight": 1.5
+          }
+        ]
+      },
+      "modalities": {
+        "scores": {
+          "mutable": 7.5,
+          "cardinal": 10.5,
+          "fixed": 4.5
+        },
+        "percent": {
+          "mutable": 33,
+          "cardinal": 47,
+          "fixed": 20
+        },
+        "dominant": "cardinal",
+        "missing": [],
+        "contributions": [
+          {
+            "body": "sun",
+            "sign": "pisces",
+            "group": "mutable",
+            "weight": 3.0
+          },
+          {
+            "body": "moon",
+            "sign": "aries",
+            "group": "cardinal",
+            "weight": 3.0
+          },
+          {
+            "body": "mercury",
+            "sign": "aquarius",
+            "group": "fixed",
+            "weight": 2.0
+          },
+          {
+            "body": "venus",
+            "sign": "capricorn",
+            "group": "cardinal",
+            "weight": 2.0
+          },
+          {
+            "body": "mars",
+            "sign": "aries",
+            "group": "cardinal",
+            "weight": 2.0
+          },
+          {
+            "body": "jupiter",
+            "sign": "cancer",
+            "group": "cardinal",
+            "weight": 1.5
+          },
+          {
+            "body": "saturn",
+            "sign": "scorpio",
+            "group": "fixed",
+            "weight": 1.5
+          },
+          {
+            "body": "uranus",
+            "sign": "cancer",
+            "group": "cardinal",
+            "weight": 1.0
+          },
+          {
+            "body": "neptune",
+            "sign": "libra",
+            "group": "cardinal",
+            "weight": 1.0
+          },
+          {
+            "body": "pluto",
+            "sign": "leo",
+            "group": "fixed",
+            "weight": 1.0
+          },
+          {
+            "body": "ascendant",
+            "sign": "virgo",
+            "group": "mutable",
+            "weight": 3.0
+          },
+          {
+            "body": "midheaven",
+            "sign": "gemini",
+            "group": "mutable",
+            "weight": 1.5
+          }
+        ]
+      },
+      "aspects": {
+        "counts": {
+          "trine": 7,
+          "sextile": 7,
+          "opposition": 4,
+          "square": 6,
+          "conjunction": 1
+        },
+        "total": 25,
+        "harmonious": 14,
+        "challenging": 10,
+        "dominant": "trine"
+      },
+      "weights": {
+        "sun": 3.0,
+        "moon": 3.0,
+        "ascendant": 3.0,
+        "mercury": 2.0,
+        "venus": 2.0,
+        "mars": 2.0,
+        "midheaven": 1.5,
+        "jupiter": 1.5,
+        "saturn": 1.5,
+        "uranus": 1.0,
+        "neptune": 1.0,
+        "pluto": 1.0
+      },
+      "excluded": [
+        "chiron",
+        "north_node",
+        "south_node",
+        "lilith"
+      ],
+      "hemispheres": {
+        "below_horizon": 5,
+        "above_horizon": 5,
+        "east": 5,
+        "west": 5,
+        "vertical_dominant": null,
+        "horizontal_dominant": null,
+        "quadrants": {
+          "q1": 2,
+          "q2": 3,
+          "q3": 2,
+          "q4": 3
+        },
+        "counted": 10
+      },
+      "chart_ruler": {
+        "rising_sign": "virgo",
+        "ruler": "mercury",
+        "sign": "aquarius",
+        "house": 5
+      }
+    }
   }
 }

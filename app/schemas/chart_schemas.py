@@ -52,6 +52,69 @@ class Angles(BaseModel):
     mc: AnglePosition
 
 
+class BalanceContribution(BaseModel):
+    """One body's share of a balance, so a client can show the working."""
+    body: str
+    sign: str
+    group: str
+    weight: float
+
+
+class Balance(BaseModel):
+    """Weighted distribution across elements or modalities."""
+    scores: dict[str, float]
+    percent: dict[str, int]
+    dominant: str | None
+    # Elements or modalities with no bodies at all — often the more telling
+    # half of the reading.
+    missing: list[str]
+    contributions: list[BalanceContribution]
+
+
+class Hemispheres(BaseModel):
+    below_horizon: int
+    above_horizon: int
+    east: int
+    west: int
+    vertical_dominant: str | None  # below | above | null when tied
+    horizontal_dominant: str | None  # east | west | null when tied
+    quadrants: dict[str, int]  # q1..q4
+    counted: int
+
+
+class ChartRuler(BaseModel):
+    rising_sign: str
+    ruler: str
+    sign: str | None
+    house: int | None
+
+
+class AspectMix(BaseModel):
+    counts: dict[str, int]
+    total: int
+    harmonious: int
+    challenging: int
+    dominant: str | None
+
+
+class ChartMetrics(BaseModel):
+    """Arithmetic over the chart — no model call, fully reproducible.
+
+    Weights are part of the payload on purpose: the split is a convention
+    astrologers disagree about, so a client can show how a number was
+    reached instead of asking readers to take it on trust.
+    """
+    elements: Balance
+    modalities: Balance
+    aspects: AspectMix
+    weights: dict[str, float]
+    excluded: list[str]
+    # Absent when the birth time is unknown: houses rest on a noon guess, so
+    # anything derived from them would be presented as fact on an assumption.
+    hemispheres: Hemispheres | None = None
+    chart_ruler: ChartRuler | None = None
+
+
 class NatalChartResponse(BaseModel):
     planets: list[PlanetPosition]
     houses: list[HouseCusp]
@@ -60,6 +123,7 @@ class NatalChartResponse(BaseModel):
     # When true the birth time was unknown (noon fallback): Asc/MC and house
     # placements are unreliable and clients MUST show a warning.
     time_unknown: bool
+    metrics: ChartMetrics
 
 
 class GeocodeRequest(BaseModel):

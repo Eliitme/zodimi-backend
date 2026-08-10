@@ -14,6 +14,7 @@ import pytest
 
 from app.astro.aspect_calculator import MAJOR_ASPECTS, calculate_major_aspects
 from app.astro.chart_calculator import build_subject, calculate_natal_chart
+from app.astro.chart_metrics import compute_metrics
 
 FIXTURE_PATH = Path(__file__).parent / "fixtures" / "natal-chart-fixture.json"
 
@@ -120,5 +121,8 @@ def test_shared_ios_fixture_is_current(jobs_chart):
     with what this backend actually computes (contract drift guard)."""
     fixture = json.loads(FIXTURE_PATH.read_text())
     subject = build_subject(**JOBS_BIRTH)
+    # Mirror the router's assembly order exactly: aspects are attached first
+    # because the metrics summarise them.
     expected = {**jobs_chart, "aspects": calculate_major_aspects(subject)}
+    expected["metrics"] = compute_metrics(expected)
     assert fixture["response"] == expected
