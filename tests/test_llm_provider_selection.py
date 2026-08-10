@@ -18,16 +18,6 @@ from app.ai.llm_provider import (
 )
 
 
-@pytest.fixture(autouse=True)
-def _clear_caches():
-    # get_provider and get_settings are both lru_cached.
-    get_provider.cache_clear()
-    llm_provider.get_settings.cache_clear()
-    yield
-    get_provider.cache_clear()
-    llm_provider.get_settings.cache_clear()
-
-
 def _settings(**overrides):
     base = {"openrouter_api_key": "", "openrouter_model": "m", "gemini_api_key": ""}
     return SimpleNamespace(**{**base, **overrides})
@@ -149,3 +139,51 @@ class TestOpenRouterAdapter:
         stub = _StubCompletions(fail_times=1)
         with pytest.raises(LLMUnavailableError):
             list(_provider_with(stub).stream("s", "p"))
+
+class TestPerEndpointModel:
+    """Interactive endpoints and the background report worker do not want the
+    same trade-off, so the model is selectable per call."""
+
+    def test_override_picks_that_model(self, monkeypatch):
+        monkeypatch.setattr(
+            llm_provider, "get_settings",
+            lambda: _settings(openrouter_api_key="k", openrouter_model="fast/one"),
+        )
+        seen = {}
+        monkeypatch.setattr(
+            llm_provider, "OpenRouterProvider",
+            lambda key, model: seen.setdefault("model", model),
+        )
+        get_provider("slow/better")
+        assert seen["model"] == "slow/better"
+
+    def test_no_override_uses_the_default_model(self, monkeypatch):
+        monkeypatch.setattr(
+            llm_provider, "get_settings",
+            lambda: _settings(openrouter_api_key="k", openrouter_model="fast/one"),
+        )
+        seen = {}
+        monkeypatch.setattr(
+            llm_provider, "OpenRouterProvider",
+            lambda key, model: seen.setdefault("model", model),
+        )
+        get_provider()
+        assert seen["model"] == "fast/one"
+
+    def test_override_is_ignored_without_openrouter(self, monkeypatch):
+        # Gemini and the fake serve one model each. Honouring an override
+        # would claim a routing that cannot happen.
+        monkeypatch.setattr(llm_provider, "get_settings", lambda: _settings())
+        assert isinstance(get_provider("anthropic/claude-sonnet-4.5"), FakeProvider)
+
+    def test_each_model_gets_its_own_cached_provider(self, monkeypatch):
+        monkeypatch.setattr(
+            llm_provider, "get_settings",
+            lambda: _settings(openrouter_api_key="k", openrouter_model="fast/one"),
+        )
+        monkeypatch.setattr(
+            llm_provider, "OpenRouterProvider",
+            lambda key, model: f"provider:{model}",
+        )
+        assert get_provider() != get_provider("slow/better")
+        assert get_provider("slow/better") == get_provider("slow/better")

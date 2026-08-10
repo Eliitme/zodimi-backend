@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     # OpenRouter changes the route without silently changing cost or writing
     # style. Swap this to A/B another model; no code change needed.
     openrouter_model: str = "google/gemini-2.5-flash"
+    # The natal report runs in a background worker, so a slower but
+    # better-writing model costs the reader nothing. Empty falls back to
+    # openrouter_model.
+    openrouter_report_model: str = ""
     gemini_api_key: str = ""
 
     # RevenueCat (used from Phase 7 onward)

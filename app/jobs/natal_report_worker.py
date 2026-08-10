@@ -22,6 +22,7 @@ from app.ai.llm_provider import get_provider
 from app.ai.prompt_repository import render
 from app.ai.safety_guardrails import system_rules
 from app.astro.chart_calculator import calculate_natal_chart
+from app.core.config import get_settings
 from app.core.supabase_client import get_service_client
 from app.jobs.job_heartbeat import record_failure, record_success
 from app.push.apns_client import notify_report_ready
@@ -70,7 +71,8 @@ def _chart_summary(profile: dict) -> str:
 
 
 def _generate_content(profile: dict, locale: str, heartbeat=None) -> str:
-    provider = get_provider()
+    # Nobody is watching this run, so it takes the report-quality model.
+    provider = get_provider(get_settings().openrouter_report_model or None)
     summary = _chart_summary(profile)
     parts = []
     for slug, title_vi, title_en in REPORT_SECTIONS:
