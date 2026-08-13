@@ -48,6 +48,27 @@ WEIGHTS = {
 EXCLUDED = ("chiron", "north_node", "south_node", "lilith")
 
 
+def _percentages(totals: Counter[str], total: float) -> dict[str, int]:
+    """Whole percentages that always sum to 100.
+
+    Rounding each share on its own is what a reader notices: four elements
+    rounded independently printed 36 + 29 + 27 + 9 = 101 beside a bar that
+    was visibly full. Largest remainder gives the leftover points to the
+    shares that lost the most to rounding, so the figures and the bar agree.
+
+    Flooring first means the floors can only undershoot 100, so there is
+    always a non-negative remainder to hand out and never one to claw back.
+    Ties break on the group name, so the same chart always renders the same.
+    """
+    exact = {group: value / total * 100 for group, value in totals.items()}
+    percent = {group: int(value) for group, value in exact.items()}
+    leftover = 100 - sum(percent.values())
+    ranked = sorted(exact, key=lambda group: (-(exact[group] - percent[group]), group))
+    for group in ranked[:leftover]:
+        percent[group] += 1
+    return percent
+
+
 def _weighted(signs_by_body: dict[str, str], table: dict[str, str]) -> dict:
     """Totals plus the per-body contributions that produced them."""
     totals: Counter[str] = Counter()
@@ -63,7 +84,7 @@ def _weighted(signs_by_body: dict[str, str], table: dict[str, str]) -> dict:
     total = sum(totals.values())
     return {
         "scores": {k: round(v, 1) for k, v in totals.items()},
-        "percent": {k: round(v / total * 100) for k, v in totals.items()} if total else {},
+        "percent": _percentages(totals, total) if total else {},
         "dominant": totals.most_common(1)[0][0] if totals else None,
         # Naming what is absent is often more telling than what dominates.
         "missing": [g for g in dict.fromkeys(table.values()) if g not in totals],

@@ -56,9 +56,25 @@ class TestElements:
         assert m["scores"]["earth"] == 4.5
         assert m["dominant"] == "water"
 
-    def test_percentages_sum_to_about_a_hundred(self):
-        pct = compute_metrics(CHART)["elements"]["percent"]
-        assert 99 <= sum(pct.values()) <= 101
+    def test_percentages_sum_to_exactly_a_hundred(self):
+        # Exactly, not approximately: the percentages sit next to a bar that
+        # fills its track, and "101%" beside a full bar reads as a bug.
+        metrics = compute_metrics(CHART)
+        assert sum(metrics["elements"]["percent"].values()) == 100
+        assert sum(metrics["modalities"]["percent"].values()) == 100
+
+    def test_percentages_sum_to_a_hundred_for_every_reachable_split(self):
+        # The independent rounding this replaced drifted only on particular
+        # splits, so one fixture cannot show it is gone. Sweep every way the
+        # twelve weighted bodies can fall across four elements instead.
+        signs = list(ELEMENTS)
+        for shift in range(12):
+            rotated = [
+                {**planet, "sign": signs[(signs.index(planet["sign"]) + shift) % 12]}
+                for planet in CHART["planets"]
+            ]
+            percent = compute_metrics({**CHART, "planets": rotated})["elements"]["percent"]
+            assert sum(percent.values()) == 100, shift
 
     def test_points_are_excluded_from_the_balance(self):
         # north_node sits in Cancer; counting it would inflate water and
