@@ -20,6 +20,7 @@ from app.ai.section_format import normalise_sections
 from app.astro.aspect_calculator import calculate_synastry_aspects
 from app.astro.chart_calculator import build_subject
 from app.core.entitlements import is_premium
+from app.core.locale import request_locale
 from app.core.supabase_client import get_service_client
 from app.schemas.chart_schemas import Aspect, BirthData
 
@@ -103,7 +104,12 @@ def create_synastry(request: Request, partner: PartnerInput) -> SynastryResult:
             detail="Complete your own birth details first",
         )
     profile = me[0]
-    locale = profile.get("locale") or "en"
+    # Accept-Language, not profiles.locale: the same account may read on a
+    # Vietnamese phone and an English one, and every other generated-text
+    # endpoint already follows the header (see core.locale). Keying this one
+    # off the stored preference gave a reader English tarot and Vietnamese
+    # synastry in the same session.
+    locale = request_locale(request)
 
     aspects = calculate_synastry_aspects(
         _subject_from(profile),
@@ -114,6 +120,19 @@ def create_synastry(request: Request, partner: PartnerInput) -> SynastryResult:
             lat=partner.lat, lon=partner.lon, tz_of_birth=partner.tz_of_birth,
         ),
     )
+
+    # Written before the model call, not after: an insert that fails once the
+    # reading exists has already spent the money and has nowhere to put the
+    # result. A partner row orphaned by a failed reading is harmless — the
+    # table is in `user_scoped_tables`, so deleting the account still clears it.
+    partner_row = service.table("partner_profiles").insert({
+        "user_id": user_id,
+        "name": partner.name,
+        "birth_date": partner.birth_date.isoformat(),
+        "birth_time": partner.birth_time.isoformat() if partner.birth_time else None,
+        "birth_time_unknown": partner.birth_time_unknown,
+        "lat": partner.lat, "lon": partner.lon, "tz_of_birth": partner.tz_of_birth,
+    }).execute().data[0]
 
     aspect_lines = "\n".join(f"{a['p1']} {a['type']} {a['p2']} (orb {a['orb']})" for a in aspects)
     try:
@@ -132,15 +151,6 @@ def create_synastry(request: Request, partner: PartnerInput) -> SynastryResult:
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Reading service is busy — please try again shortly",
         )
-
-    partner_row = service.table("partner_profiles").insert({
-        "user_id": user_id,
-        "name": partner.name,
-        "birth_date": partner.birth_date.isoformat(),
-        "birth_time": partner.birth_time.isoformat() if partner.birth_time else None,
-        "birth_time_unknown": partner.birth_time_unknown,
-        "lat": partner.lat, "lon": partner.lon, "tz_of_birth": partner.tz_of_birth,
-    }).execute().data[0]
 
     result = service.table("synastry_results").insert({
         "owner_user_id": user_id,
