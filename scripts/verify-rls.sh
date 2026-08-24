@@ -56,6 +56,16 @@ for tbl in prompt_templates ai_content_cache iap_events; do
   check "authenticated denied on $tbl" "42501" "$(rest GET "$tbl?select=*" "$TB" | code_of)"
 done
 
+echo "== backend-owned tables (read only through the API) =="
+# natal_reports and synastry_results hold PAID content. Their premium gate
+# lives in the API (reports_router._gate_content), so a direct select grant
+# here is a way around it — a lapsed subscriber could read the full report
+# straight from PostgREST. The other three carry no grant because no client
+# reads them. Any of these turning green again means someone re-granted.
+for tbl in natal_reports synastry_results partner_profiles tarot_draws tarot_qa_log; do
+  check "authenticated denied on $tbl" "42501" "$(rest GET "$tbl?select=*" "$TB" | code_of)"
+done
+
 echo
 echo "passed: $PASS, failed: $FAIL"
 [ "$FAIL" -eq 0 ]
