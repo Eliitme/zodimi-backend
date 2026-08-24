@@ -3,19 +3,30 @@ convention) — do not add router-level auth here."""
 
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 from kerykeion import KerykeionException
 
 from app.astro.aspect_calculator import calculate_major_aspects
-from app.astro.chart_calculator import build_subject, calculate_natal_chart
+from app.astro.chart_calculator import build_subject, chart_from_subject
 from app.astro.chart_metrics import compute_metrics
+from app.core.rate_limit import RateLimit, enforce
 from app.schemas.chart_schemas import BirthData, NatalChartResponse
 
 router = APIRouter(prefix="/charts", tags=["charts"])
 
+# Swiss Ephemeris is the most expensive thing this API does per request, and
+# a guest account costs nothing to create — without a limit one script can
+# saturate the single API container's CPU. The cost here is compute, not a
+# third-party bill, so the ceiling can be generous: a real reader computes
+# one chart per birth-data change (iOS caches the result on disk, the web
+# recomputes only when the form changes), nowhere near thirty a minute.
+CHART_LIMIT = RateLimit(max_calls=30, per_seconds=60)
+
 
 @router.post("/natal", response_model=NatalChartResponse)
-def natal_chart(body: BirthData) -> NatalChartResponse:
+def natal_chart(request: Request, body: BirthData) -> NatalChartResponse:
+    enforce(request, "chart", CHART_LIMIT)
+
     try:
         ZoneInfo(body.tz_of_birth)
     except (ZoneInfoNotFoundError, ValueError):
@@ -25,19 +36,15 @@ def natal_chart(body: BirthData) -> NatalChartResponse:
         )
 
     try:
-        chart = calculate_natal_chart(
-            birth_date=body.birth_date,
-            birth_time=body.birth_time,
-            birth_time_unknown=body.birth_time_unknown,
-            lat=body.lat,
-            lon=body.lon,
-            tz_of_birth=body.tz_of_birth,
-        )
-        # Aspects need the kerykeion subject; rebuild is cheap and keeps the
-        # calculator modules independent of each other.
+        # One subject for the whole response: the chart and its aspects both
+        # read from it, and building it twice meant computing the ephemeris
+        # twice for a single request.
         subject = build_subject(
             body.birth_date, body.birth_time, body.birth_time_unknown,
             body.lat, body.lon, body.tz_of_birth,
+        )
+        chart = chart_from_subject(
+            subject, bool(body.birth_time_unknown or body.birth_time is None)
         )
         chart["aspects"] = calculate_major_aspects(subject)
         # After aspects, not before: the aspect mix is part of the

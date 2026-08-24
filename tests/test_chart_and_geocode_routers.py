@@ -123,3 +123,40 @@ def test_geocode_returns_empty_list_when_not_found(monkeypatch):
         assert resp.json() == {"results": []}
     finally:
         clear_overrides()
+
+
+def test_natal_chart_is_rate_limited():
+    """Swiss Ephemeris is the priciest thing this API does per request and a
+    guest account is free to create, so an unlimited chart endpoint is one
+    script away from saturating the container's CPU."""
+    from app.api.charts_router import CHART_LIMIT
+
+    override_auth()
+    try:
+        for _ in range(CHART_LIMIT.max_calls):
+            assert client.post("/v1/charts/natal", json=NATAL_BODY).status_code == 200
+        assert client.post("/v1/charts/natal", json=NATAL_BODY).status_code == 429
+    finally:
+        clear_overrides()
+
+
+def test_one_request_builds_the_subject_once(monkeypatch):
+    """The handler needs the subject twice — for the chart and for its
+    aspects — and used to build it twice, running the ephemeris twice for a
+    single call."""
+    import app.api.charts_router as charts
+
+    builds = []
+    real_build = charts.build_subject
+
+    def counting_build(*args, **kwargs):
+        builds.append(1)
+        return real_build(*args, **kwargs)
+
+    monkeypatch.setattr(charts, "build_subject", counting_build)
+    override_auth()
+    try:
+        assert client.post("/v1/charts/natal", json=NATAL_BODY).status_code == 200
+    finally:
+        clear_overrides()
+    assert len(builds) == 1

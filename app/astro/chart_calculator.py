@@ -72,20 +72,19 @@ def build_subject(
     )
 
 
-def calculate_natal_chart(
-    birth_date: date,
-    birth_time: time | None,
-    birth_time_unknown: bool,
-    lat: float,
-    lon: float,
-    tz_of_birth: str,
-) -> dict:
-    """Birth data → chart dict matching the NatalChartResponse contract
-    (aspects are added by the router via aspect_calculator)."""
-    subject = build_subject(
-        birth_date, birth_time, birth_time_unknown, lat, lon, tz_of_birth
-    )
+def chart_from_subject(subject: AstrologicalSubject, time_unknown: bool) -> dict:
+    """Computed subject → chart dict matching the NatalChartResponse contract
+    (aspects are added by the router via aspect_calculator).
 
+    Split from `calculate_natal_chart` so a caller that ALSO needs the subject
+    — the natal endpoint does, for aspects — can build it once. Building it
+    twice ran Swiss Ephemeris twice for one request, and it is the most
+    expensive thing this API does.
+
+    `time_unknown` is passed in rather than re-derived: `build_subject`
+    already resolved a missing time to the noon fallback, so by here the
+    subject looks the same either way and cannot answer the question.
+    """
     planets = []
     for attr, contract_name in PLANET_ATTRS:
         p = getattr(subject, attr)
@@ -133,6 +132,22 @@ def calculate_natal_chart(
         # A missing birth time is treated as unknown even if the flag says
         # otherwise — the chart was computed with the noon fallback, so
         # Asc/MC/houses must never be presented as reliable.
-        "time_unknown": bool(birth_time_unknown or birth_time is None),
+        "time_unknown": time_unknown,
     }
     return chart
+
+
+def calculate_natal_chart(
+    birth_date: date,
+    birth_time: time | None,
+    birth_time_unknown: bool,
+    lat: float,
+    lon: float,
+    tz_of_birth: str,
+) -> dict:
+    """Birth data → chart dict. Convenience wrapper for callers that do not
+    need the subject afterwards (the report worker's chart summary)."""
+    subject = build_subject(
+        birth_date, birth_time, birth_time_unknown, lat, lon, tz_of_birth
+    )
+    return chart_from_subject(subject, bool(birth_time_unknown or birth_time is None))
