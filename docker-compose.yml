@@ -1,8 +1,12 @@
 services:
   api:
     build: .
+    # Loopback only: Caddy is the sole way in (deploy/Caddyfile.example).
+    # Published on 0.0.0.0 the API is reachable without TLS and with a fully
+    # attacker-controlled X-Forwarded-For, which would undo the per-IP rate
+    # limit no matter how carefully the header is parsed.
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     env_file:
       - .env
     # Local Supabase stack runs on the HOST (`supabase start`), so inside the

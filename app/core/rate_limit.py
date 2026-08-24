@@ -1,9 +1,13 @@
-"""In-process rate limiting for endpoints backed by a third party.
+"""In-process rate limiting for endpoints that cost more than a DB read.
 
-Geocoding proxies Nominatim, whose usage policy applies to OUR user agent:
-if the web tier lets anyone hammer it, Nominatim blocks the shared UA and
-onboarding breaks in the iOS app too. The blast radius is what makes this
-worth guarding, not the cost.
+Two reasons an endpoint lands here:
+
+- It proxies a third party whose usage policy applies to OUR identity.
+  Geocoding proxies Nominatim: if the web tier lets anyone hammer it,
+  Nominatim blocks the shared user agent and onboarding breaks in the iOS
+  app too. The blast radius is what makes this worth guarding, not the cost.
+- It burns real CPU. Chart computation runs Swiss Ephemeris, which is the
+  most expensive thing this API does per request.
 
 Deliberately in-process (no Redis): one API container today, and a limit
 that resets on deploy is still far better than none. Move this to the
@@ -25,6 +29,14 @@ class RateLimit:
 
 _hits: dict[str, deque[float]] = defaultdict(deque)
 
+# Without a sweep this dict grows one entry per (bucket, caller) for the life
+# of the process — anonymous callers alone would make that unbounded. The
+# retention is far longer than any window in use, so a key is only dropped
+# once it cannot possibly still be limiting anyone.
+_SWEEP_EVERY_CALLS = 1000
+_MAX_WINDOW_SECONDS = 3600
+_calls_since_sweep = 0
+
 
 def _consume(key: str, limit: RateLimit, now: float) -> bool:
     window = _hits[key]
@@ -37,6 +49,34 @@ def _consume(key: str, limit: RateLimit, now: float) -> bool:
     return True
 
 
+def _sweep(now: float) -> None:
+    cutoff = now - _MAX_WINDOW_SECONDS
+    stale = [key for key, window in _hits.items() if not window or window[-1] < cutoff]
+    for key in stale:
+        del _hits[key]
+
+
+def _client_ip(request: Request) -> str:
+    """The caller's address as the reverse proxy saw it.
+
+    The LAST X-Forwarded-For hop, not the first. Caddy appends the peer
+    address to whatever the client already sent, so the first entry is
+    attacker-controlled text and the last is the one Caddy wrote itself —
+    reading the first turned the IP bucket into "one bucket per header
+    value", which is no limit at all.
+
+    This assumes exactly ONE trusted proxy in front of the API (see
+    deploy/Caddyfile.example, which also pins trusted_proxies so Caddy
+    replaces rather than extends an untrusted header). Adding a CDN or a
+    second proxy means counting back from the end by that many hops.
+    """
+    forwarded = request.headers.get("x-forwarded-for", "")
+    last_hop = forwarded.split(",")[-1].strip() if forwarded else ""
+    if last_hop:
+        return last_hop
+    return request.client.host if request.client else "?"
+
+
 def enforce(request: Request, bucket: str, limit: RateLimit) -> None:
     """Counts the caller against `limit`, raising 429 when exhausted.
 
@@ -44,14 +84,20 @@ def enforce(request: Request, bucket: str, limit: RateLimit) -> None:
     a signed-up guest costs nothing to create, so a per-user limit alone
     would be trivially bypassed by signing up again.
     """
+    global _calls_since_sweep
+
     now = time.monotonic()
+    _calls_since_sweep += 1
+    if _calls_since_sweep >= _SWEEP_EVERY_CALLS:
+        _calls_since_sweep = 0
+        _sweep(now)
+
     user_id = getattr(request.state, "user_id", None)
     claims = getattr(request.state, "jwt_claims", {}) or {}
 
     keys = [f"{bucket}:user:{user_id}"]
     if claims.get("is_anonymous"):
-        client_ip = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
-        keys.append(f"{bucket}:ip:{client_ip or (request.client.host if request.client else '?')}")
+        keys.append(f"{bucket}:ip:{_client_ip(request)}")
 
     for key in keys:
         if not _consume(key, limit, now):
@@ -63,4 +109,7 @@ def enforce(request: Request, bucket: str, limit: RateLimit) -> None:
 
 def reset() -> None:
     """Test helper: clears all windows."""
+    global _calls_since_sweep
+
     _hits.clear()
+    _calls_since_sweep = 0

@@ -4,6 +4,19 @@
 #
 # Install on the VPS at /etc/caddy/Caddyfile, then: systemctl reload caddy
 
+{
+	servers {
+		# Without this Caddy APPENDS the peer address to whatever
+		# X-Forwarded-For the client sent, so the header arrives as
+		# "<whatever they claimed>, <real ip>". Pinning trusted_proxies makes
+		# Caddy replace an untrusted header instead of extending it, which is
+		# what lets the API's per-IP rate limit mean anything (see
+		# app/core/rate_limit._client_ip). Caddy and the API share this host,
+		# so the private ranges cover the only hop that should be trusted.
+		trusted_proxies static private_ranges
+	}
+}
+
 api.stellune.app {
 	reverse_proxy 127.0.0.1:8000
 

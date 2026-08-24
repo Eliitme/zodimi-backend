@@ -15,6 +15,7 @@ visible in review rather than dependent on whose machine it runs on.
 import pytest
 
 from app.ai import llm_provider
+from app.core import rate_limit
 from app.core.config import get_settings
 
 
@@ -30,3 +31,14 @@ def force_offline_llm(monkeypatch):
     yield
     get_settings.cache_clear()
     llm_provider.get_provider.cache_clear()
+
+
+@pytest.fixture(autouse=True)
+def clean_rate_limit_windows():
+    """Rate-limit state is module-level and in-process, so one test that
+    exhausts a bucket would 429 the next one that happens to share a key.
+    Endpoints started carrying limits beyond geocode, which is when this
+    stopped being a detail of a single test file."""
+    rate_limit.reset()
+    yield
+    rate_limit.reset()
