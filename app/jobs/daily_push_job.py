@@ -14,7 +14,7 @@ Run via cron every hour:
 
 import logging
 from datetime import UTC, datetime
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError, available_timezones
 
 from app.core.supabase_client import get_service_client
 from app.jobs.job_heartbeat import record_failure, record_success
@@ -47,15 +47,46 @@ def devices_due(devices: list[dict], now_utc: datetime | None = None) -> list[di
     return due
 
 
-def _fetch_all_devices(service) -> list[dict]:
+def zones_in_push_hour(now: datetime) -> list[str]:
+    """IANA zones whose local time is currently inside the push hour.
+
+    Roughly one in twenty-four, so asking the database for just these beats
+    reading every row every hour. Pure function, and `devices_due` re-checks
+    each device anyway — this only narrows what gets read.
+    """
+    return [
+        name
+        for name in sorted(available_timezones())
+        if _local_hour(now, name) == PUSH_HOUR
+    ]
+
+
+def _local_hour(now: datetime, zone: str) -> int | None:
+    try:
+        return now.astimezone(ZoneInfo(zone)).hour
+    except (ZoneInfoNotFoundError, ValueError, KeyError):
+        return None
+
+
+def _fetch_all_devices(service, zones: list[str] | None = None) -> list[dict]:
     """Paged read: a single select silently truncates at PostgREST's
-    max_rows, which would leave devices beyond that limit never pushed."""
+    max_rows, which would leave devices beyond that limit never pushed.
+
+    `zones` narrows the read to the timezones currently in the push hour.
+    Omitted (or empty) means read everything — the job still works, it just
+    carries the whole table through memory.
+    """
     devices: list[dict] = []
     offset = 0
     while True:
-        page = (
+        query = (
             service.table("devices")
             .select("id, apns_token, device_timezone, locale, last_push_date")
+        )
+        if zones:
+            query = query.in_("device_timezone", zones)
+        page = (
+            query
             .order("id")
             .range(offset, offset + PAGE_SIZE - 1)
             .execute().data
@@ -69,7 +100,7 @@ def _fetch_all_devices(service) -> list[dict]:
 def run(now_utc: datetime | None = None) -> int:
     now = now_utc or datetime.now(UTC)
     service = get_service_client()
-    due = devices_due(_fetch_all_devices(service), now)
+    due = devices_due(_fetch_all_devices(service, zones_in_push_hour(now)), now)
     if not due:
         record_success(JOB_NAME)
         return 0

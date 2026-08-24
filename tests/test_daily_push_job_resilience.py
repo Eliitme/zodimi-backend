@@ -21,6 +21,13 @@ class FakeTable:
 
     def select(self, *_args, **_kwargs): return self
     def order(self, *_args, **_kwargs): return self
+
+    def in_(self, column, values):
+        # Records the narrowing the job asks for; the fake still returns
+        # everything, so tests keep exercising paging rather than the filter.
+        self.store.setdefault("filtered", []).append((column, values))
+        return self
+
     def eq(self, _col, value):
         self._id = value
         return self
@@ -121,3 +128,29 @@ def test_one_bad_device_does_not_abort_the_bucket(monkeypatch):
     assert job.run(at_push_hour()) == 3          # all three still sent
     assert [i for i, _ in service.store["updated"]] == [0, 2]
     assert failures["n"] == 1                    # and the failure is reported
+
+
+def test_only_zones_in_the_push_hour_are_read(monkeypatch):
+    """Reading every device every hour is one full table scan per hour for a
+    bucket that is, by definition, about one twenty-fourth of the rows."""
+    service = FakeService(make_devices(3))
+    monkeypatch.setattr(job, "get_service_client", lambda: service)
+    monkeypatch.setattr(job, "send_batch_sync",
+                        lambda msgs: [PushResult(delivered=True) for _ in msgs])
+    monkeypatch.setattr(job, "record_success", lambda _n: None)
+
+    job.run(at_push_hour())
+
+    column, zones = service.store["filtered"][0]
+    assert column == "device_timezone"
+    assert "Asia/Ho_Chi_Minh" in zones      # 08:00 local at 01:00 UTC
+    assert "Europe/London" not in zones     # 02:00 local — not this bucket
+
+
+def test_zone_bucket_tracks_the_hour_not_a_fixed_offset():
+    """Zones are resolved at run time so DST needs no stored offset."""
+    zones = job.zones_in_push_hour(at_push_hour())
+    assert all(
+        job._local_hour(at_push_hour(), zone) == job.PUSH_HOUR for zone in zones
+    )
+    assert zones, "some zone is always in the push hour"

@@ -21,6 +21,12 @@ MAX_SILENCE = {
     "daily_tarot_pregen": timedelta(hours=25),      # runs daily
     "daily_push": timedelta(hours=2),               # runs hourly
     "stale_report_watchdog": timedelta(minutes=30),  # runs every 5 minutes
+    # The queue consumer, which was absent here while it wrote a heartbeat
+    # nobody read: when it died, reports simply stayed `queued` forever. The
+    # watchdog does not cover this — it only rescues rows already claimed
+    # into `generating`. Threshold is one hour against a 5-minute idle beat,
+    # loose enough to ride out a deploy restart.
+    "natal_report_worker": timedelta(hours=1),
 }
 
 
@@ -35,7 +41,13 @@ def overdue_jobs(now: datetime | None = None) -> list[str]:
         if stamp is None:
             problems.append(f"{job_name}: never ran")
             continue
-        age = now - datetime.fromisoformat(stamp)
+        last_success = datetime.fromisoformat(stamp)
+        if last_success.tzinfo is None:
+            # PostgREST returns timestamptz with an offset today, but a naive
+            # value here would raise and take down the one thing that reports
+            # jobs dying — the monitor must not be the fragile part.
+            last_success = last_success.replace(tzinfo=UTC)
+        age = now - last_success
         if age > max_silence:
             problems.append(f"{job_name}: silent for {age}")
     return problems

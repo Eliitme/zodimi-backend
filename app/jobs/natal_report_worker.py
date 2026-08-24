@@ -152,13 +152,28 @@ def process_one() -> bool:
         return True
 
 
+# An idle worker is indistinguishable from a dead one if it only reports in
+# after doing work: the queue is empty most of the night, so any silence
+# threshold would either alert on a healthy night or never alert at all.
+# Beating on an interval while idle is what makes the threshold mean
+# "the process is gone" instead of "nobody asked for a report".
+IDLE_HEARTBEAT_SECONDS = 300
+
+
 def main() -> None:
     logging.basicConfig(level=logging.INFO)
     if "--loop" in sys.argv:
         logger.info("worker loop started")
+        last_idle_beat = 0.0
         while True:
-            if not process_one():
-                time.sleep(3)
+            if process_one():
+                last_idle_beat = 0.0
+                continue
+            now = time.monotonic()
+            if now - last_idle_beat >= IDLE_HEARTBEAT_SECONDS:
+                record_success(JOB_NAME)
+                last_idle_beat = now
+            time.sleep(3)
     else:
         while process_one():
             pass

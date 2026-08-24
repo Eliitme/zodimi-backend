@@ -94,7 +94,19 @@ async def send_batch(messages: list[tuple[str, str, str]]) -> list[PushResult]:
         async with semaphore:
             return await _send_with(client, *message)
 
-    return await asyncio.gather(*(one(m) for m in messages))
+    try:
+        return await asyncio.gather(*(one(m) for m in messages))
+    finally:
+        # The client owns an HTTP/2 connection pool. Cron jobs exit and take
+        # it with them, but the report worker runs `--loop` forever and calls
+        # this once per finished report — an unclosed pool each time leaks a
+        # TLS connection for the life of the container. The pool cannot be
+        # kept between calls either: it is bound to the event loop that
+        # `send_batch_sync` creates and discards.
+        try:
+            client.pool.close()
+        except Exception as exc:  # never let cleanup fail a delivered push
+            logger.warning("APNs pool close failed: %s", exc)
 
 
 def send_batch_sync(messages: list[tuple[str, str, str]]) -> list[PushResult]:
