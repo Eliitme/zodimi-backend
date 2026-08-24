@@ -128,6 +128,17 @@ def ask(request: Request, body: AskRequest) -> StreamingResponse:
     if detect_self_harm(body.question):
         return sse([crisis_response(locale)])
 
+    # Cheap pre-check so a caller who is already out of questions stops
+    # adding rows: without it every refused attempt still wrote to the log,
+    # and someone hammering the button past their limit grew the table for
+    # nothing. This is NOT the quota enforcement — it races, which is why
+    # the insert-then-count below stays exactly as it is.
+    if qa_questions_used_today(user_id) >= QA_DAILY_LIMIT:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Daily limit of {QA_DAILY_LIMIT} questions reached",
+        )
+
     # Charge quota by INSERTING FIRST, then counting — two concurrent
     # requests at the limit both insert, but the count check catches the
     # overrun (and a crashed LLM call still costs the attempt).
