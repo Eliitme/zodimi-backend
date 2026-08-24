@@ -74,6 +74,18 @@ def _gate_content(row: dict, user_id: str) -> dict:
     return gated
 
 
+def _presented(row: dict, user_id: str, locale: str) -> ReportStatusResponse:
+    """The one way a report row leaves this module.
+
+    Every path returns through here so the gate and the disclaimer cannot be
+    forgotten on one of them — which is exactly what happened: POST returned
+    the stored row raw, so a reader who tapped "create" on an already-finished
+    report got the full text with no disclaimer while both GETs added it.
+    A freshly queued row has no content and passes through untouched.
+    """
+    return ReportStatusResponse(**_with_disclaimer(_gate_content(row, user_id), locale))
+
+
 @router.post("/natal", response_model=ReportStatusResponse, status_code=status.HTTP_201_CREATED)
 def request_natal_report(request: Request) -> ReportStatusResponse:
     user_id: str = request.state.user_id
@@ -114,7 +126,7 @@ def request_natal_report(request: Request) -> ReportStatusResponse:
         .order("requested_at", desc=True).limit(1).execute().data
     )
     if existing:
-        return ReportStatusResponse(**existing[0])
+        return _presented(existing[0], user_id, request_locale(request))
 
     try:
         row = (
@@ -136,7 +148,7 @@ def request_natal_report(request: Request) -> ReportStatusResponse:
                 detail="Please retry the request",
             )
         row = rows[0]
-    return ReportStatusResponse(**row)
+    return _presented(row, user_id, request_locale(request))
 
 
 @router.get("/natal/latest", response_model=ReportStatusResponse)
@@ -153,9 +165,7 @@ def get_latest_natal_report(request: Request) -> ReportStatusResponse:
     )
     if not rows:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No report yet")
-    return ReportStatusResponse(
-        **_with_disclaimer(_gate_content(rows[0], user_id), request_locale(request))
-    )
+    return _presented(rows[0], user_id, request_locale(request))
 
 
 @router.get("/natal/{report_id}", response_model=ReportStatusResponse)
@@ -169,6 +179,4 @@ def get_natal_report(request: Request, report_id: UUID) -> ReportStatusResponse:
     )
     if not rows:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Report not found")
-    return ReportStatusResponse(
-        **_with_disclaimer(_gate_content(rows[0], user_id), request_locale(request))
-    )
+    return _presented(rows[0], user_id, request_locale(request))

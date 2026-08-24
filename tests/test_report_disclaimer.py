@@ -33,3 +33,36 @@ def test_not_applied_twice():
 def test_pending_report_without_content_is_untouched():
     row = {"content": None, "status": "generating"}
     assert reports._with_disclaimer(row, "vi") == row
+
+
+def test_every_response_path_goes_through_the_same_presenter(monkeypatch):
+    """POST used to return the stored row raw while both GETs wrapped it, so
+    a reader who tapped "create" on an already-finished report got the full
+    text with no disclaimer. Routing all four returns through `_presented` is
+    what makes that impossible to reintroduce on one path only."""
+    monkeypatch.setattr(reports, "is_premium", lambda _user_id: True)
+    row = {
+        "id": "11111111-1111-1111-1111-111111111111",
+        "status": "done",
+        "content": FULL,
+        "requested_at": "2026-01-01T00:00:00Z",
+        "completed_at": "2026-01-01T00:05:00Z",
+    }
+    assert reports._presented(row, "user-a", "vi").content.endswith(DISCLAIMER["vi"])
+
+
+def test_presenter_gates_before_it_appends(monkeypatch):
+    """Order matters: the disclaimer has to land after truncation, otherwise
+    the free tier loses exactly the notice it most needs."""
+    monkeypatch.setattr(reports, "is_premium", lambda _user_id: False)
+    row = {
+        "id": "11111111-1111-1111-1111-111111111111",
+        "status": "done",
+        "content": FULL,
+        "requested_at": "2026-01-01T00:00:00Z",
+        "completed_at": "2026-01-01T00:05:00Z",
+    }
+    presented = reports._presented(row, "user-a", "vi")
+    assert presented.content.endswith(DISCLAIMER["vi"])
+    assert presented.content.count("## Phần") == reports.FREE_SECTION_COUNT
+    assert presented.locked_section_titles == [f"Phần {i}" for i in range(4, 11)]
