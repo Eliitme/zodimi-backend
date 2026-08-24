@@ -11,6 +11,8 @@ Defense layers, in order:
 4. Timestamp ordering: RevenueCat does not guarantee delivery order — an
    EXPIRATION older than an already-processed RENEWAL must never revoke a
    paying user's entitlement.
+5. TRANSFER revokes the account a subscription moved away from, so one
+   purchase cannot leave two accounts permanently entitled.
 """
 
 import hmac
@@ -34,6 +36,49 @@ PREMIUM_ON_EVENTS = {
 }
 # CANCELLATION only turns off auto-renew — access lasts until EXPIRATION.
 PREMIUM_OFF_EVENTS = {"EXPIRATION"}
+
+
+def _parsed(stamp: str) -> datetime:
+    """PostgREST timestamptz → aware datetime."""
+    parsed = datetime.fromisoformat(stamp)
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
+
+
+def _revoke_transferred_from(service, payload: dict, event_id: str) -> bool:
+    """Take premium away from the account a subscription moved OFF.
+
+    Apple lets a subscription follow the buyer to a different app user, and
+    RevenueCat reports that as one TRANSFER naming both sides. Treating it as
+    informational left the losing account premium forever — one purchase,
+    two permanent entitlements, which is a subscription-sharing loophole.
+
+    Only the revoke half is applied here. The receiving account gets its
+    entitlement from its own INITIAL_PURCHASE/RENEWAL event, verified the
+    usual way; granting from a payload field would mean trusting the webhook
+    body to hand out premium, which is the one thing this module refuses to do.
+
+    Known gap: the caller drops the whole event when `app_user_id` matches no
+    profile, so a transfer TO an account we have never seen leaves the losing
+    side entitled. Closing it means letting TRANSFER past that check, which
+    touches the idempotency insert — deliberately not done here.
+    """
+    event = payload.get("event") or {}
+    losers = event.get("transferred_from") or []
+    if not isinstance(losers, list):
+        return False
+
+    revoked = False
+    for raw_id in losers:
+        try:
+            UUID(str(raw_id))
+        except (ValueError, TypeError):
+            continue  # anonymous RC id — never matched a profile anyway
+        service.table("profiles").update({"is_premium": False}) \
+            .eq("user_id", str(raw_id)).execute()
+        revoked = True
+    if revoked:
+        logger.info("transfer %s revoked premium from %d account(s)", event_id, len(losers))
+    return revoked
 
 
 @router.post("/revenuecat-webhook")
@@ -89,8 +134,12 @@ async def revenuecat_webhook(request: Request) -> dict:
         # Redelivery of an event we already processed: acknowledge, change nothing.
         return {"status": "duplicate"}
 
+    if event_type == "TRANSFER":
+        revoked = _revoke_transferred_from(service, payload, event_id)
+        return {"status": "applied" if revoked else "stored"}
+
     if event_type not in PREMIUM_ON_EVENTS and event_type not in PREMIUM_OFF_EVENTS:
-        return {"status": "stored"}  # informational event (TEST, TRANSFER, ...)
+        return {"status": "stored"}  # informational event (TEST, ...)
 
     # Out-of-order guard: only the NEWEST event may change entitlement.
     newest = (
@@ -98,7 +147,11 @@ async def revenuecat_webhook(request: Request) -> dict:
         .eq("user_id", app_user_id)
         .order("event_timestamp", desc=True).limit(1).execute().data
     )
-    if newest and newest[0]["event_timestamp"] > event_at.isoformat():
+    # Compared as datetimes, not strings: the two sides are produced by
+    # different formatters (PostgREST vs datetime.isoformat) and a lexical
+    # comparison only happens to work while they agree on fractional seconds
+    # and offset spelling.
+    if newest and _parsed(newest[0]["event_timestamp"]) > event_at:
         logger.info("stale event %s (%s) — entitlement unchanged", event_id, event_type)
         return {"status": "stale"}
 
