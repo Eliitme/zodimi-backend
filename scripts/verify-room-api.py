@@ -11,7 +11,8 @@ things only the real thing can confirm.
 Creates three throwaway anonymous users and leaves their rows behind; local
 stacks are disposable, and `supabase db reset` clears them.
 """
-import json, urllib.request
+import json
+import urllib.request
 
 API = "http://127.0.0.1:8000"
 SB = "http://127.0.0.1:54321"
@@ -21,8 +22,10 @@ def call(url, method="GET", token=None, body=None, headers=None):
     data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(url, data=data, method=method)
     req.add_header("Content-Type", "application/json")
-    if token: req.add_header("Authorization", f"Bearer {token}")
-    for k, v in (headers or {}).items(): req.add_header(k, v)
+    if token:
+        req.add_header("Authorization", f"Bearer {token}")
+    for key, value in (headers or {}).items():
+        req.add_header(key, value)
     try:
         with urllib.request.urlopen(req) as r:
             return r.status, json.loads(r.read() or b"null")
@@ -31,10 +34,11 @@ def call(url, method="GET", token=None, body=None, headers=None):
 
 def guest():
     req = urllib.request.Request(f"{SB}/auth/v1/signup", data=b"{}", method="POST")
-    req.add_header("apikey", ANON); req.add_header("Content-Type", "application/json")
-    with urllib.request.urlopen(req) as r:
-        d = json.loads(r.read())
-    return d["access_token"], d["user"]["id"]
+    req.add_header("apikey", ANON)
+    req.add_header("Content-Type", "application/json")
+    with urllib.request.urlopen(req) as response:
+        body = json.loads(response.read())
+    return body["access_token"], body["user"]["id"]
 
 def set_birth(token, uid, date, time_, unknown=False):
     body = {"user_id": uid, "birth_date": date, "birth_time": time_,
@@ -44,15 +48,24 @@ def set_birth(token, uid, date, time_, unknown=False):
     for k, v in {"apikey": ANON, "Authorization": f"Bearer {token}",
                  "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates"}.items():
         req.add_header(k, v)
-    with urllib.request.urlopen(req) as r: r.read()
+    with urllib.request.urlopen(req) as response:
+        response.read()
 
 ok = fail = 0
+
+
 def check(label, cond, extra=""):
     global ok, fail
-    if cond: ok += 1; print(f"  ok: {label}")
-    else: fail += 1; print(f"  FAIL: {label} {extra}")
+    if cond:
+        ok += 1
+        print(f"  ok: {label}")
+    else:
+        fail += 1
+        print(f"  FAIL: {label} {extra}")
 
-ta, ua = guest(); tb, ub = guest(); tc, uc = guest()
+ta, ua = guest()
+tb, ub = guest()
+tc, uc = guest()
 set_birth(ta, ua, "1988-01-02", "10:00:00")
 set_birth(tb, ub, "1990-04-12", "08:30:00")
 set_birth(tc, uc, "1995-06-06", None, unknown=True)

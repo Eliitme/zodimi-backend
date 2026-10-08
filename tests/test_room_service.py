@@ -13,7 +13,15 @@ from app.services import room_service
 
 
 def with_secret(monkeypatch, value: str = "test-secret") -> None:
+    """Pins both room settings.
+
+    WEB_BASE_URL is blanked rather than left alone: settings read the ambient
+    .env, so a developer with a local host configured turned "the link is
+    just a path" into a failure that only happened on their machine. A test
+    that wants a host sets one.
+    """
     monkeypatch.setenv("ROOM_INVITE_SECRET", value)
+    monkeypatch.setenv("WEB_BASE_URL", "")
     get_settings.cache_clear()
 
 

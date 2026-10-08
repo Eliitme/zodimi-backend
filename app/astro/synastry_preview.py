@@ -97,8 +97,11 @@ MAX_EVIDENCE_PER_CATEGORY = 3
 SUMMARIES: dict[str, dict[str, dict[str, str]]] = {
     "vi": {
         "attraction": {
-            "found": "Có những góc chiếu cho thấy hai bạn dễ bị cuốn vào nhau. "
-            "Đây là chỗ để bắt đầu một cuộc trò chuyện, không phải kết luận.",
+            # The "this is a conversation, not a verdict" framing belongs
+            # once, on the page that holds all three — repeating it inside
+            # one of the cards made the reader hear it twice in two
+            # paragraphs and read as hedging rather than as honesty.
+            "found": "Có những góc chiếu cho thấy hai bạn dễ bị cuốn vào nhau.",
             "none": "Chưa đủ góc chiếu rõ ràng để nói về khía cạnh này.",
         },
         "communication": {
@@ -113,8 +116,7 @@ SUMMARIES: dict[str, dict[str, dict[str, str]]] = {
     },
     "en": {
         "attraction": {
-            "found": "Some contacts here suggest the two of you notice each other. "
-            "A place to start a conversation, not a conclusion.",
+            "found": "Some contacts here suggest the two of you notice each other.",
             "none": "Not enough clear contacts to say anything about this one.",
         },
         "communication": {

@@ -26,7 +26,13 @@ from app.services.room_service import MAX_INVITE_ATTEMPTS, hash_invite_token
 router = APIRouter(prefix="/invitations", tags=["rooms"])
 
 # Tighter than the room endpoints: this is the one path where the caller
-# supplies a secret, so it is the one worth guessing at.
+# supplies a secret. Per ACCOUNT — the shared per-address bucket is ten times
+# this (see rate_limit.IP_BUCKET_MULTIPLIER), because everyone arriving on an
+# invite link is anonymous and a school or an office is one address.
+#
+# Neither bucket is what actually bounds enumeration: a token is 32 random
+# bytes, and each invitation stops answering after MAX_INVITE_ATTEMPTS no
+# matter who asks. These only damp noise.
 TOKEN_LIMIT = RateLimit(max_calls=10, per_seconds=60)
 
 #: Token length is fixed by `secrets.token_urlsafe(32)`. Rejecting anything

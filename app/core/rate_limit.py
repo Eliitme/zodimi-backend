@@ -27,6 +27,18 @@ class RateLimit:
     per_seconds: int
 
 
+#: How much more an IP may do than a single account.
+#:
+#: Anonymous callers are counted twice — once per account, once per address —
+#: because a guest account costs nothing to create, so a per-account limit
+#: alone is bypassed by signing up again. But an address is not a person: a
+#: school, an office or a phone network is one address for hundreds of
+#: readers, and holding that to one reader's ceiling locks all of them out
+#: together. The per-account limit is still the one that stops a single
+#: abuser; this one only has to stop a flood.
+IP_BUCKET_MULTIPLIER = 10
+
+
 _hits: dict[str, deque[float]] = defaultdict(deque)
 
 # Without a sweep this dict grows one entry per (bucket, caller) for the life
@@ -82,7 +94,8 @@ def enforce(request: Request, bucket: str, limit: RateLimit) -> None:
 
     Anonymous users share a per-IP bucket as well as their per-user one:
     a signed-up guest costs nothing to create, so a per-user limit alone
-    would be trivially bypassed by signing up again.
+    would be trivially bypassed by signing up again. The shared bucket is
+    `IP_BUCKET_MULTIPLIER` times larger, because an address is many people.
     """
     global _calls_since_sweep
 
@@ -95,12 +108,18 @@ def enforce(request: Request, bucket: str, limit: RateLimit) -> None:
     user_id = getattr(request.state, "user_id", None)
     claims = getattr(request.state, "jwt_claims", {}) or {}
 
-    keys = [f"{bucket}:user:{user_id}"]
+    checks = [(f"{bucket}:user:{user_id}", limit)]
     if claims.get("is_anonymous"):
-        keys.append(f"{bucket}:ip:{_client_ip(request)}")
+        checks.append((
+            f"{bucket}:ip:{_client_ip(request)}",
+            RateLimit(
+                max_calls=limit.max_calls * IP_BUCKET_MULTIPLIER,
+                per_seconds=limit.per_seconds,
+            ),
+        ))
 
-    for key in keys:
-        if not _consume(key, limit, now):
+    for key, applicable in checks:
+        if not _consume(key, applicable, now):
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 detail="Too many requests — please slow down",

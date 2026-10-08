@@ -8,7 +8,7 @@ caller would get the shared UA blocked and break iOS onboarding too.
 import pytest
 from fastapi import HTTPException, Request
 
-from app.core.rate_limit import RateLimit, enforce, reset
+from app.core.rate_limit import IP_BUCKET_MULTIPLIER, RateLimit, enforce, reset
 
 
 def fake_request(
@@ -41,6 +41,10 @@ def clean_windows():
 
 LIMIT = RateLimit(max_calls=3, per_seconds=60)
 
+#: What an address may do before it is throttled. Larger than one account's
+#: ceiling on purpose: an address is a school or an office, not a person.
+IP_BUDGET = LIMIT.max_calls * IP_BUCKET_MULTIPLIER
+
 
 def test_allows_calls_up_to_the_limit():
     request = fake_request("user-a")
@@ -66,15 +70,31 @@ def test_users_have_separate_budgets():
 def test_anonymous_users_also_share_a_per_ip_budget():
     """Guest accounts are free to create, so a per-user limit alone would be
     bypassed by signing up again from the same machine."""
-    for index in range(3):
+    for index in range(IP_BUDGET):
         enforce(fake_request(f"guest-{index}", anonymous=True), "geocode", LIMIT)
     with pytest.raises(HTTPException) as caught:
         enforce(fake_request("guest-fresh", anonymous=True), "geocode", LIMIT)
     assert caught.value.status_code == 429
 
 
+def test_the_shared_budget_is_bigger_than_one_accounts():
+    """An address is many readers. Holding a NAT to a single reader's
+    ceiling throttles a whole office the moment a few of them onboard at
+    once — which is what the e2e suite started doing to itself."""
+    assert IP_BUDGET > LIMIT.max_calls
+    # One account still exhausts its own ceiling long before the address
+    # does, so a single abuser is stopped by the per-account limit.
+    request = fake_request("guest-a", anonymous=True)
+    for _ in range(LIMIT.max_calls):
+        enforce(request, "geocode", LIMIT)
+    with pytest.raises(HTTPException):
+        enforce(request, "geocode", LIMIT)
+    # ...while their neighbours on the same address carry on.
+    enforce(fake_request("guest-b", anonymous=True), "geocode", LIMIT)
+
+
 def test_different_ips_are_independent():
-    for index in range(3):
+    for index in range(IP_BUDGET):
         enforce(fake_request(f"g-{index}", anonymous=True, ip="9.9.9.9"), "geocode", LIMIT)
     enforce(fake_request("g-other", anonymous=True, ip="8.8.8.8"), "geocode", LIMIT)
 
@@ -99,7 +119,7 @@ def test_spoofed_forwarded_for_cannot_buy_a_fresh_ip_budget():
     first made the IP bucket "one bucket per header value" — a caller who
     varied the header was never limited at all."""
     real_ip = "203.0.113.7"
-    for index in range(3):
+    for index in range(IP_BUDGET):
         enforce(
             fake_request(
                 f"guest-{index}",
@@ -126,7 +146,7 @@ def test_spoofed_forwarded_for_cannot_buy_a_fresh_ip_budget():
 
 def test_falls_back_to_peer_address_without_a_forwarded_header():
     """Direct hits (no proxy) still get an IP bucket."""
-    for index in range(3):
+    for index in range(IP_BUDGET):
         enforce(fake_request(f"g-{index}", anonymous=True, ip="198.51.100.4", forwarded=""),
                 "geocode", LIMIT)
     with pytest.raises(HTTPException):
