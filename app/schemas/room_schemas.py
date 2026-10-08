@@ -115,6 +115,11 @@ class SharePolicy(BaseModel):
 class RoomResult(BaseModel):
     room_id: UUID
     status: str
+    #: Which side of the evidence the reader is on. `p1` of every aspect is
+    #: the owner's point and `p2` the invitee's, and without knowing which
+    #: they are, "Saturn square Moon" is two different readings — whose
+    #: Saturn and whose Moon is most of what it means.
+    viewer_role: str
     #: Opaque hash of both revisions plus the algorithm and template
     #: versions. Safe to log; carries nothing it was computed from.
     pair_revision: str

@@ -413,3 +413,16 @@ def test_leaving_revokes_rather_than_deletes(store):
     # closes the reading.
     assert row["revoked_at"] is not None
     assert store["astro_rooms"][0]["status"] == "revoked"
+
+
+def test_the_reading_says_which_side_of_it_the_reader_is_on(store):
+    # `p1` is the owner's point and `p2` the invitee's. Without knowing which
+    # they are, "Saturn square Moon" is two different readings — whose Saturn
+    # and whose Moon is most of what it means.
+    store["astro_room_members"].append(member(INVITEE, "invitee"))
+
+    sign_in_as(OWNER)
+    assert client.post(f"/v1/rooms/{ROOM}/preview").json()["viewer_role"] == "owner"
+
+    sign_in_as(INVITEE)
+    assert client.get(f"/v1/rooms/{ROOM}/result").json()["viewer_role"] == "invitee"

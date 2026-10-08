@@ -54,6 +54,10 @@ def _subject_from(profile: dict):
     )
 
 
+def _role_of(user_id: str, owner: dict) -> str:
+    return "owner" if owner["user_id"] == user_id else "invitee"
+
+
 def _members(service, room_id: UUID, user_id: str) -> tuple[dict, dict]:
     """The owner and the invitee, both live and both consented.
 
@@ -78,11 +82,12 @@ def _members(service, room_id: UUID, user_id: str) -> tuple[dict, dict]:
     return by_role["owner"], by_role["invitee"]
 
 
-def _presented(room_id: UUID, stored: dict, locale: str) -> RoomResult:
+def _presented(room_id: UUID, stored: dict, locale: str, viewer_role: str) -> RoomResult:
     insights = stored["free_insights_json"] or {}
     return RoomResult(
         room_id=room_id,
         status=stored["status"],
+        viewer_role=viewer_role,
         pair_revision=stored["pair_revision_hash"],
         locale=locale,
         reliability=MemberReliability(**insights["reliability"]),
@@ -120,7 +125,7 @@ def compute_preview(request: Request, room_id: UUID) -> RoomResult:
         # Deterministic rules mean recomputing would produce the same bytes,
         # so the only thing a second computation buys is two more ephemeris
         # runs.
-        return _presented(room_id, cached[0], locale)
+        return _presented(room_id, cached[0], locale, _role_of(user_id, owner))
 
     profiles = (
         service.table("profiles").select("*")
@@ -164,7 +169,7 @@ def compute_preview(request: Request, room_id: UUID) -> RoomResult:
             .eq("room_id", str(room_id)).eq("pair_revision_hash", revision)
             .limit(1).execute().data[0]
         )
-    return _presented(room_id, stored, locale)
+    return _presented(room_id, stored, locale, _role_of(user_id, owner))
 
 
 @router.get("/{room_id}/result", response_model=RoomResult)
@@ -190,4 +195,4 @@ def get_result(request: Request, room_id: UUID) -> RoomResult:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="No reading for this pair yet"
         )
-    return _presented(room_id, stored[0], locale)
+    return _presented(room_id, stored[0], locale, _role_of(user_id, owner))
