@@ -61,6 +61,14 @@ rest PATCH "profiles?user_id=eq.$UA" "$TA" '{"name":"A3"}' >/dev/null
 REV_RENAMED="$(rest GET "profiles?user_id=eq.$UA&select=profile_revision" "$TA" | sed -n 's/.*"profile_revision":\([0-9]*\).*/\1/p')"
 check "renaming does not bump it" "$REV_AFTER" "$REV_RENAMED"
 
+echo "== room tables reject client writes =="
+# A client that could insert a membership row could add itself to someone
+# else''"'"'s room; one that could update astro_rooms could flip a revoked room
+# back to ready. Neither grant exists, and this is what notices if one
+# appears.
+check "authenticated cannot create a room" "42501" "$(rest POST astro_rooms "$TB" '{"owner_user_id":"'$UA'","topic":"friendship"}' | code_of)"
+check "authenticated cannot add itself as a member" "42501" "$(rest POST astro_room_members "$TB" '{"room_id":"00000000-0000-4000-8000-000000000000","user_id":"'$UA'","role":"invitee"}' | code_of)"
+
 echo "== shared content =="
 check "authenticated reads tarot_cards" "78" "$(rest GET "tarot_cards?select=id" "$TB" | len_of)"
 check "authenticated reads sign_interpretations" "72" "$(rest GET "sign_interpretations?select=sign" "$TB" | len_of)"
@@ -77,7 +85,12 @@ echo "== backend-owned tables (read only through the API) =="
 # here is a way around it — a lapsed subscriber could read the full report
 # straight from PostgREST. The other three carry no grant because no client
 # reads them. Any of these turning green again means someone re-granted.
-for tbl in natal_reports synastry_results partner_profiles tarot_draws tarot_qa_log; do
+# The four room tables join the same group. A room holds two accounts'
+# material and its premium_content is paid text, so the two-sided consent
+# rule can only be enforced where the invitation token is — in the API.
+# astro_room_invitations additionally holds the token hashes.
+for tbl in natal_reports synastry_results partner_profiles tarot_draws tarot_qa_log \
+           astro_rooms astro_room_members astro_room_invitations astro_room_results; do
   check "authenticated denied on $tbl" "42501" "$(rest GET "$tbl?select=*" "$TB" | code_of)"
 done
 
