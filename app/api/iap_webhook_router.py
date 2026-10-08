@@ -29,7 +29,7 @@ from postgrest.exceptions import APIError
 from app.core.config import get_settings
 from app.core.supabase_client import get_service_client
 
-logger = logging.getLogger("stellune.iap")
+logger = logging.getLogger("zodimi.iap")
 
 router = APIRouter(prefix="/iap", tags=["iap"])
 

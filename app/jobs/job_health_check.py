@@ -14,7 +14,7 @@ from datetime import UTC, datetime, timedelta
 
 from app.core.supabase_client import get_service_client
 
-logger = logging.getLogger("stellune.jobs.health")
+logger = logging.getLogger("zodimi.jobs.health")
 
 # job_name → how long silence is acceptable (generous vs the real cadence).
 MAX_SILENCE = {

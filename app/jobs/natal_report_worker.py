@@ -27,7 +27,7 @@ from app.core.supabase_client import get_service_client
 from app.jobs.job_heartbeat import record_failure, record_success
 from app.push.apns_client import notify_report_ready
 
-logger = logging.getLogger("stellune.jobs.report_worker")
+logger = logging.getLogger("zodimi.jobs.report_worker")
 
 JOB_NAME = "natal_report_worker"
 MAX_RETRIES = 3

@@ -2,7 +2,7 @@
 // CORS setup is needed; Supabase auth is called directly (it allows any
 // origin) to obtain the same JWT the iOS app uses.
 
-const SESSION_KEY = "stellune-console-session";
+const SESSION_KEY = "zodimi-console-session";
 
 export const state = {
   supabaseUrl: null,

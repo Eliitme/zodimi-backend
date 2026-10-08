@@ -17,7 +17,7 @@ from app.revenuecat.revenuecat_client import (
     subscriber_has_premium,
 )
 
-logger = logging.getLogger("stellune.iap")
+logger = logging.getLogger("zodimi.iap")
 
 router = APIRouter(prefix="/iap", tags=["iap"])
 

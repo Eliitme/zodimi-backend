@@ -1329,7 +1329,7 @@ wheels = [
 ]
 
 [[package]]
-name = "stellune-backend"
+name = "zodimi-backend"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

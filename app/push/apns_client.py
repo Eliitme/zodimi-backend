@@ -14,15 +14,15 @@ from dataclasses import dataclass
 
 from app.core.config import get_settings
 
-logger = logging.getLogger("stellune.push")
+logger = logging.getLogger("zodimi.push")
 
 # Reasons that mean the token will NEVER work again (Apple's APNs docs).
 DEAD_TOKEN_REASONS = {"Unregistered", "BadDeviceToken", "DeviceTokenNotForTopic"}
 
 # Copy per locale for each notification kind.
 DAILY_CARD = {
-    "vi": ("Lá bài hôm nay đang đợi bạn", "Mở Stellune để xem thông điệp của ngày mới."),
-    "en": ("Your card for today is waiting", "Open Stellune to see today's message."),
+    "vi": ("Lá bài hôm nay đang đợi bạn", "Mở Zodimi để xem thông điệp của ngày mới."),
+    "en": ("Your card for today is waiting", "Open Zodimi to see today's message."),
 }
 REPORT_READY = {
     "vi": ("Báo cáo của bạn đã sẵn sàng", "Bản đồ sao chuyên sâu của bạn đã được chuẩn bị xong."),

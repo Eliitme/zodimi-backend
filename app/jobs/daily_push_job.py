@@ -20,7 +20,7 @@ from app.core.supabase_client import get_service_client
 from app.jobs.job_heartbeat import record_failure, record_success
 from app.push.apns_client import DAILY_CARD, send_batch_sync
 
-logger = logging.getLogger("stellune.jobs.daily_push")
+logger = logging.getLogger("zodimi.jobs.daily_push")
 
 JOB_NAME = "daily_push"
 PUSH_HOUR = 8

@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 
 from app.core.supabase_client import get_service_client
 
-logger = logging.getLogger("stellune.jobs")
+logger = logging.getLogger("zodimi.jobs")
 
 
 def record_success(job_name: str) -> None:

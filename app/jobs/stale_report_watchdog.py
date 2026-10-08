@@ -12,7 +12,7 @@ from datetime import UTC, datetime, timedelta
 from app.core.supabase_client import get_service_client
 from app.jobs.job_heartbeat import record_success
 
-logger = logging.getLogger("stellune.jobs.watchdog")
+logger = logging.getLogger("zodimi.jobs.watchdog")
 
 JOB_NAME = "stale_report_watchdog"
 STALE_TTL_MINUTES = 15

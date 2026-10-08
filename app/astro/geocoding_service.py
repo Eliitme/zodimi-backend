@@ -18,7 +18,7 @@ MAX_RESULTS = 5
 
 # Nominatim median response is often >1s — geopy's 1s default timeout would
 # turn routine slowness into spurious 503s during onboarding.
-_geolocator = Nominatim(user_agent="stellune-backend", timeout=5)
+_geolocator = Nominatim(user_agent="zodimi-backend", timeout=5)
 _tz_finder: TimezoneFinder | None = None
 
 

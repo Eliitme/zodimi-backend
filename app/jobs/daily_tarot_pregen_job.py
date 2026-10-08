@@ -17,7 +17,7 @@ from app.ai.safety_guardrails import system_rules
 from app.core.supabase_client import get_service_client
 from app.jobs.job_heartbeat import record_failure, record_success
 
-logger = logging.getLogger("stellune.jobs.pregen")
+logger = logging.getLogger("zodimi.jobs.pregen")
 
 JOB_NAME = "daily_tarot_pregen"
 CONTENT_TYPE = "daily_tarot"

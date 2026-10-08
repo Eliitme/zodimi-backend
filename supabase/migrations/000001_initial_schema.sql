@@ -1,4 +1,4 @@
--- Stellune initial schema.
+-- Zodimi initial schema.
 -- RLS philosophy:
 --   * owner tables: user reads own rows; content rows are written by the
 --     backend (service role, which bypasses RLS and must check ownership in

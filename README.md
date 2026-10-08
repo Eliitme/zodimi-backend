@@ -1,6 +1,6 @@
-# Stellune Backend
+# Zodimi Backend
 
-FastAPI backend for **Stellune** — astrology & tarot iOS app (natal charts, daily tarot, AI-generated readings).
+FastAPI backend for **Zodimi** — astrology & tarot iOS app (natal charts, daily tarot, AI-generated readings).
 
 Licensed under **AGPL-3.0** (uses `pyswisseph`, added in the ephemeris phase). The iOS app lives in a separate private repository.
 

@@ -71,7 +71,7 @@ class Settings(BaseSettings):
     apns_key_path: str = ""      # path to AuthKey_XXXXXXXXXX.p8 on the host
     apns_key_id: str = ""
     apns_team_id: str = ""
-    apns_bundle_id: str = "com.stellune.app"
+    apns_bundle_id: str = "com.zodimi.app"
     apns_use_sandbox: bool = True
 
 

@@ -15,7 +15,7 @@ whole class of failure.
 import logging
 import re
 
-logger = logging.getLogger("stellune.ai.sections")
+logger = logging.getLogger("zodimi.ai.sections")
 
 _HEADING = re.compile(r"^#{1,6}\s*(.+?)\s*$", re.MULTILINE)
 

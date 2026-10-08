@@ -18,7 +18,7 @@ from supabase_auth.errors import AuthApiError
 
 from app.core.supabase_client import get_service_client
 
-logger = logging.getLogger("stellune.account")
+logger = logging.getLogger("zodimi.account")
 
 router = APIRouter(prefix="/account", tags=["account"])
 

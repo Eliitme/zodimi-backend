@@ -17,7 +17,7 @@
 	}
 }
 
-api.stellune.app {
+api.app.zodimi.com {
 	reverse_proxy 127.0.0.1:8000
 
 	# The RevenueCat webhook authenticates with its own secret, so it must
@@ -37,10 +37,10 @@ api.stellune.app {
 # Legal documents must live at a stable public URL before App Store
 # submission (Apple blocks review without them) and are linked from the
 # paywall and Settings.
-stellune.app {
+app.zodimi.com {
 	handle_path /legal/* {
-		root * /srv/stellune-legal
+		root * /srv/zodimi-legal
 		file_server
 	}
-	redir / https://apps.apple.com/app/stellune permanent
+	redir / https://apps.apple.com/app/zodimi permanent
 }

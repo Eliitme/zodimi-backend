@@ -14,7 +14,7 @@ from typing import Protocol
 
 from app.core.config import get_settings
 
-logger = logging.getLogger("stellune.llm")
+logger = logging.getLogger("zodimi.llm")
 
 GEMINI_MODEL = "gemini-2.5-flash"
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
@@ -99,7 +99,7 @@ class OpenRouterProvider:
             base_url=OPENROUTER_BASE_URL,
             timeout=REQUEST_TIMEOUT_S,
             # Attribution shown on OpenRouter's dashboard; no PII.
-            default_headers={"X-Title": "Stellune"},
+            default_headers={"X-Title": "Zodimi"},
         )
 
     def _messages(self, system: str, prompt: str) -> list[dict[str, str]]:

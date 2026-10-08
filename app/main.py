@@ -1,4 +1,4 @@
-"""Stellune backend entrypoint.
+"""Zodimi backend entrypoint.
 
 Routing convention (enforced here, do not bypass):
 - `public`: ONLY /health and, later, the RevenueCat webhook (own secret auth).
@@ -27,9 +27,9 @@ from app.api.tarot_router import router as tarot_router
 from app.core.auth import require_user
 from app.core.config import get_settings
 
-logger = logging.getLogger("stellune.api")
+logger = logging.getLogger("zodimi.api")
 
-app = FastAPI(title="Stellune API", version="0.1.0")
+app = FastAPI(title="Zodimi API", version="0.1.0")
 
 # The web app runs on its own origin; the iOS app is unaffected (native
 # clients do not enforce CORS). Explicit origins only — see config.

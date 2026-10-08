@@ -109,7 +109,7 @@ def main() -> int:
         help="section slugs, or 'all' for the full ten-section report",
     )
     parser.add_argument("--locale", default="vi")
-    parser.add_argument("--out", default="/tmp/stellune-llm-compare")
+    parser.add_argument("--out", default="/tmp/zodimi-llm-compare")
     args = parser.parse_args()
 
     if not get_settings().openrouter_api_key:

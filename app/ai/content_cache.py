@@ -11,7 +11,7 @@ from postgrest.exceptions import APIError
 
 from app.core.supabase_client import get_service_client
 
-logger = logging.getLogger("stellune.cache")
+logger = logging.getLogger("zodimi.cache")
 
 
 def get(content_type: str, cache_key: str, locale: str) -> str | None:

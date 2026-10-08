@@ -1,7 +1,7 @@
 [project]
-name = "stellune-backend"
+name = "zodimi-backend"
 version = "0.1.0"
-description = "Stellune — astrology & tarot backend (FastAPI + Supabase)"
+description = "Zodimi — astrology & tarot backend (FastAPI + Supabase)"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "AGPL-3.0-or-later"
