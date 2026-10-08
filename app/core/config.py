@@ -57,6 +57,16 @@ class Settings(BaseSettings):
     def allowed_origins(self) -> list[str]:
         return [o.strip() for o in self.web_origins.split(",") if o.strip()]
 
+    # Astro Rooms. The HMAC key for invite-token hashes: a database dump
+    # alone must not be enough to recognise a token. Rotating it invalidates
+    # every outstanding invitation, which is the intended emergency lever.
+    room_invite_secret: str = ""
+    # Canonical origin of the web app, used to build invite links. Empty
+    # means links come back as a path and the client prepends its own
+    # origin — a link to the wrong domain is worse than no host at all, and
+    # the host is an owner decision that is not made yet.
+    web_base_url: str = ""
+
     # APNs token-based auth (.p8). Empty in dev → push calls become no-ops.
     apns_key_path: str = ""      # path to AuthKey_XXXXXXXXXX.p8 on the host
     apns_key_id: str = ""

@@ -18,7 +18,10 @@ from app.api.devices_router import router as devices_router
 from app.api.geocode_router import router as geocode_router
 from app.api.iap_sync_router import router as iap_sync_router
 from app.api.iap_webhook_router import router as iap_webhook_router
+from app.api.invitations_router import router as invitations_router
 from app.api.reports_router import router as reports_router
+from app.api.room_results_router import router as room_results_router
+from app.api.rooms_router import router as rooms_router
 from app.api.synastry_router import router as synastry_router
 from app.api.tarot_router import router as tarot_router
 from app.core.auth import require_user
@@ -68,7 +71,13 @@ if get_settings().dev_tools:
     )
 api.include_router(geocode_router)
 api.include_router(iap_sync_router)
+api.include_router(invitations_router)
 api.include_router(reports_router)
+# Two routers share the /rooms prefix: one owns the room itself, the other
+# the reading inside it. Split by lifetime, not by URL — a room outlives any
+# particular reading of it.
+api.include_router(rooms_router)
+api.include_router(room_results_router)
 api.include_router(synastry_router)
 api.include_router(tarot_router)
 

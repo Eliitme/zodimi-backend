@@ -343,6 +343,90 @@ raise notice '== policies: reachable, non-recursive, and correct ==';
     reset role;
 end $$;
 
+-- =============================================== accepting an invitation
+--
+-- The RPC is the only place the check and the write happen together. Every
+-- branch below is a different answer the reader gets, and getting one wrong
+-- means either a locked-out invitee or a room with two of somebody.
+do $$
+declare
+    a uuid; b uuid; c uuid; room uuid; res record;
+begin
+raise notice '== accept: the branches ==';
+    a := pg_temp.mkuser('acc-a'); b := pg_temp.mkuser('acc-b'); c := pg_temp.mkuser('acc-c');
+    room := pg_temp.mkroom(a);
+    insert into public.astro_room_invitations (room_id, token_hash, expires_at)
+    values (room, 'hash-accept', now() + interval '7 days');
+
+    select * into res from public.accept_room_invitation('nope', b, 'v1', 1);
+    perform pg_temp.expect('an unknown token is neutral', res.code, 'invalid');
+
+    select * into res from public.accept_room_invitation('hash-accept', a, 'v1', 1);
+    perform pg_temp.expect('the owner cannot accept their own', res.code, 'owner_cannot_accept');
+
+    select * into res from public.accept_room_invitation('hash-accept', b, 'v1', 3);
+    perform pg_temp.expect('the invitee joins', res.code, 'ok');
+    perform pg_temp.expect('and lands in the right room', res.room_id, room);
+    perform pg_temp.expect('the room turns ready',
+        (select status from public.astro_rooms where id = room), 'ready');
+    perform pg_temp.expect('consent is recorded at the moment of joining',
+        (select consent_at is not null and consent_version = 'v1' and profile_revision = 3
+         from public.astro_room_members where room_id = room and user_id = b), true);
+    perform pg_temp.expect('and the reading opens',
+        public.astro_room_has_both_consents(room), true);
+
+    -- The retry case. A dropped response must not lock someone out of the
+    -- room they just joined.
+    select * into res from public.accept_room_invitation('hash-accept', b, 'v1', 3);
+    perform pg_temp.expect('the same person retrying is not a second claim', res.code, 'ok');
+    perform pg_temp.expect('and no duplicate membership appears',
+        (select count(*)::int from public.astro_room_members where room_id = room), 2);
+
+    -- AC-08: the link was forwarded. Only one B exists.
+    select * into res from public.accept_room_invitation('hash-accept', c, 'v1', 1);
+    perform pg_temp.expect('a second person is turned away', res.code, 'already_claimed');
+    perform pg_temp.expect('the room still holds two people',
+        (select count(*)::int from public.astro_room_members where room_id = room), 2);
+
+raise notice '== accept: expiry, revocation and a closed room ==';
+    a := pg_temp.mkuser('acc-a2'); b := pg_temp.mkuser('acc-b2');
+    room := pg_temp.mkroom(a);
+
+    insert into public.astro_room_invitations (room_id, token_hash, expires_at)
+    values (room, 'hash-expired', now() - interval '1 minute');
+    select * into res from public.accept_room_invitation('hash-expired', b, 'v1', 1);
+    perform pg_temp.expect('an expired link is refused', res.code, 'expired');
+    perform pg_temp.expect('and writes no membership',
+        (select count(*)::int from public.astro_room_members where room_id = room), 1);
+
+    update public.astro_room_invitations set revoked_at = now() where room_id = room;
+    insert into public.astro_room_invitations (room_id, token_hash, expires_at)
+    values (room, 'hash-revoked', now() + interval '7 days');
+    update public.astro_room_invitations set revoked_at = now()
+    where token_hash = 'hash-revoked';
+    select * into res from public.accept_room_invitation('hash-revoked', b, 'v1', 1);
+    perform pg_temp.expect('a withdrawn link is refused', res.code, 'revoked');
+
+    insert into public.astro_room_invitations (room_id, token_hash, expires_at)
+    values (room, 'hash-closed', now() + interval '7 days');
+    update public.astro_rooms set status = 'closed' where id = room;
+    select * into res from public.accept_room_invitation('hash-closed', b, 'v1', 1);
+    perform pg_temp.expect('a closed room is refused', res.code, 'room_closed');
+
+raise notice '== accept: every attempt is counted ==';
+    -- Counting is what lets the API stop answering for a link being swept
+    -- from a rotating set of cheap anonymous sessions.
+    a := pg_temp.mkuser('acc-a3'); b := pg_temp.mkuser('acc-b3');
+    room := pg_temp.mkroom(a);
+    insert into public.astro_room_invitations (room_id, token_hash, expires_at)
+    values (room, 'hash-count', now() + interval '7 days');
+    perform public.accept_room_invitation('hash-count', a, 'v1', 1);
+    perform public.accept_room_invitation('hash-count', a, 'v1', 1);
+    perform pg_temp.expect('refused attempts still increment the counter',
+        (select attempt_count from public.astro_room_invitations
+          where token_hash = 'hash-count'), 2);
+end $$;
+
 \echo '  all room lifecycle checks passed'
 
 rollback;
