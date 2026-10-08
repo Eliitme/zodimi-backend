@@ -41,6 +41,10 @@ class ReportStatusResponse(BaseModel):
     # Titles of sections withheld server-side for non-premium users. The
     # client renders these as locked rows — it never receives their text.
     locked_section_titles: list[str] | None = None
+    # True when the birth data has changed since this report was written, so
+    # the prose describes a chart the account no longer has. Additive: older
+    # clients that do not read it are unaffected.
+    is_stale: bool = False
 
 
 def _with_disclaimer(row: dict, locale: str) -> dict:
@@ -74,7 +78,28 @@ def _gate_content(row: dict, user_id: str) -> dict:
     return gated
 
 
-def _presented(row: dict, user_id: str, locale: str) -> ReportStatusResponse:
+def _current_profile_revision(service, user_id: str) -> int | None:
+    rows = (
+        service.table("profiles").select("profile_revision")
+        .eq("user_id", user_id).limit(1).execute().data
+    )
+    return rows[0]["profile_revision"] if rows else None
+
+
+def _is_stale(row: dict, current_revision: int | None) -> bool:
+    """Whether this report still describes the account's current chart.
+
+    A row written before reports carried a revision cannot prove it does, and
+    "unknown" must not be presented as "current" — that is the whole failure
+    this guards against.
+    """
+    stored = row.get("profile_revision")
+    return stored is None or current_revision is None or stored != current_revision
+
+
+def _presented(
+    row: dict, user_id: str, locale: str, current_revision: int | None
+) -> ReportStatusResponse:
     """The one way a report row leaves this module.
 
     Every path returns through here so the gate and the disclaimer cannot be
@@ -83,7 +108,9 @@ def _presented(row: dict, user_id: str, locale: str) -> ReportStatusResponse:
     report got the full text with no disclaimer while both GETs added it.
     A freshly queued row has no content and passes through untouched.
     """
-    return ReportStatusResponse(**_with_disclaimer(_gate_content(row, user_id), locale))
+    presented = _with_disclaimer(_gate_content(row, user_id), locale)
+    presented["is_stale"] = _is_stale(row, current_revision)
+    return ReportStatusResponse(**presented)
 
 
 @router.post("/natal", response_model=ReportStatusResponse, status_code=status.HTTP_201_CREATED)
@@ -108,8 +135,8 @@ def request_natal_report(request: Request) -> ReportStatusResponse:
         )
 
     profile = (
-        service.table("profiles").select("birth_date").eq("user_id", user_id)
-        .limit(1).execute().data
+        service.table("profiles").select("birth_date, profile_revision")
+        .eq("user_id", user_id).limit(1).execute().data
     )
     if not profile or profile[0]["birth_date"] is None:
         raise HTTPException(
@@ -125,12 +152,15 @@ def request_natal_report(request: Request) -> ReportStatusResponse:
         .neq("status", "failed")
         .order("requested_at", desc=True).limit(1).execute().data
     )
+    revision = profile[0]["profile_revision"]
     if existing:
-        return _presented(existing[0], user_id, request_locale(request))
+        return _presented(existing[0], user_id, request_locale(request), revision)
 
     try:
         row = (
-            service.table("natal_reports").insert({"user_id": user_id}).execute().data[0]
+            service.table("natal_reports")
+            .insert({"user_id": user_id, "profile_revision": revision})
+            .execute().data[0]
         )
     except APIError as exc:
         # Unique-violation from a concurrent request (e.g. two devices on
@@ -148,7 +178,7 @@ def request_natal_report(request: Request) -> ReportStatusResponse:
                 detail="Please retry the request",
             )
         row = rows[0]
-    return _presented(row, user_id, request_locale(request))
+    return _presented(row, user_id, request_locale(request), revision)
 
 
 @router.get("/natal/latest", response_model=ReportStatusResponse)
@@ -157,26 +187,30 @@ def get_latest_natal_report(request: Request) -> ReportStatusResponse:
     in-flight report when the screen reopens (defined before /{report_id}
     so the literal path wins route matching)."""
     user_id: str = request.state.user_id
+    service = get_service_client()
     rows = (
-        get_service_client()
-        .table("natal_reports").select("*").eq("user_id", user_id)
+        service.table("natal_reports").select("*").eq("user_id", user_id)
         .neq("status", "failed")
         .order("requested_at", desc=True).limit(1).execute().data
     )
     if not rows:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No report yet")
-    return _presented(rows[0], user_id, request_locale(request))
+    return _presented(
+        rows[0], user_id, request_locale(request), _current_profile_revision(service, user_id)
+    )
 
 
 @router.get("/natal/{report_id}", response_model=ReportStatusResponse)
 def get_natal_report(request: Request, report_id: UUID) -> ReportStatusResponse:
     user_id: str = request.state.user_id
+    service = get_service_client()
     rows = (
-        get_service_client()
-        .table("natal_reports").select("*")
+        service.table("natal_reports").select("*")
         .eq("id", str(report_id)).eq("user_id", user_id)  # ownership scope
         .limit(1).execute().data
     )
     if not rows:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Report not found")
-    return _presented(rows[0], user_id, request_locale(request))
+    return _presented(
+        rows[0], user_id, request_locale(request), _current_profile_revision(service, user_id)
+    )

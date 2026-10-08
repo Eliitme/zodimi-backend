@@ -46,6 +46,21 @@ check "A cannot set own is_premium" "42501" "$(rest PATCH "profiles?user_id=eq.$
 check "A cannot insert with is_premium" "42501" "$(rest POST profiles "$TB" "$BODY_PREMIUM_INSERT" | code_of)"
 check "A can still update allowed cols" "OK" "$(rest PATCH "profiles?user_id=eq.$UA" "$TA" '{"name":"A2"}' | code_of)"
 
+echo "== column privileges (reading provenance) =="
+# profile_revision is what tells a stored reading which chart it describes.
+# A client that could pin it could make a stale reading look current, which
+# is the one claim the column exists to prevent.
+check "A cannot set own profile_revision" "42501" "$(rest PATCH "profiles?user_id=eq.$UA" "$TA" '{"profile_revision":99}' | code_of)"
+# And the trigger, not the grant, is what decides the value: editing the
+# birth data has to move it even though nothing in the payload mentions it.
+REV_BEFORE="$(rest GET "profiles?user_id=eq.$UA&select=profile_revision" "$TA" | sed -n 's/.*"profile_revision":\([0-9]*\).*/\1/p')"
+rest PATCH "profiles?user_id=eq.$UA" "$TA" '{"birth_time":"09:15:00"}' >/dev/null
+REV_AFTER="$(rest GET "profiles?user_id=eq.$UA&select=profile_revision" "$TA" | sed -n 's/.*"profile_revision":\([0-9]*\).*/\1/p')"
+check "editing birth data bumps the revision" "yes" "$([ "$REV_AFTER" -gt "$REV_BEFORE" ] && echo yes || echo "no ($REV_BEFORE -> $REV_AFTER)")"
+rest PATCH "profiles?user_id=eq.$UA" "$TA" '{"name":"A3"}' >/dev/null
+REV_RENAMED="$(rest GET "profiles?user_id=eq.$UA&select=profile_revision" "$TA" | sed -n 's/.*"profile_revision":\([0-9]*\).*/\1/p')"
+check "renaming does not bump it" "$REV_AFTER" "$REV_RENAMED"
+
 echo "== shared content =="
 check "authenticated reads tarot_cards" "78" "$(rest GET "tarot_cards?select=id" "$TB" | len_of)"
 check "authenticated reads sign_interpretations" "72" "$(rest GET "sign_interpretations?select=sign" "$TB" | len_of)"

@@ -48,7 +48,7 @@ def test_every_response_path_goes_through_the_same_presenter(monkeypatch):
         "requested_at": "2026-01-01T00:00:00Z",
         "completed_at": "2026-01-01T00:05:00Z",
     }
-    assert reports._presented(row, "user-a", "vi").content.endswith(DISCLAIMER["vi"])
+    assert reports._presented(row, "user-a", "vi", 1).content.endswith(DISCLAIMER["vi"])
 
 
 def test_presenter_gates_before_it_appends(monkeypatch):
@@ -62,7 +62,7 @@ def test_presenter_gates_before_it_appends(monkeypatch):
         "requested_at": "2026-01-01T00:00:00Z",
         "completed_at": "2026-01-01T00:05:00Z",
     }
-    presented = reports._presented(row, "user-a", "vi")
+    presented = reports._presented(row, "user-a", "vi", 1)
     assert presented.content.endswith(DISCLAIMER["vi"])
     assert presented.content.count("## Phần") == reports.FREE_SECTION_COUNT
     assert presented.locked_section_titles == [f"Phần {i}" for i in range(4, 11)]

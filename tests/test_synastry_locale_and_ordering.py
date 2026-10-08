@@ -36,6 +36,9 @@ PROFILE = {
     "lon": 106.6297,
     "tz_of_birth": "Asia/Ho_Chi_Minh",
     "locale": "vi",
+    # Set by a database trigger on every write; the reading records it so a
+    # later birth-data edit can be told apart from no edit at all.
+    "profile_revision": 1,
 }
 
 
@@ -153,3 +156,110 @@ def test_partner_is_stored_before_the_model_is_paid_for(monkeypatch):
 
     assert client.post("/v1/synastry", json=PARTNER_BODY).status_code == 201
     assert ops.index("insert:partner_profiles") < ops.index("render")
+
+
+# ---------------------------------------------------------------- staleness
+
+STORED_ASPECTS = [
+    {"p1": "sun", "p2": "moon", "type": "trine", "orb": 2.1},
+    {"p1": "venus", "p2": "mars", "type": "square", "orb": 4.3},
+]
+
+
+def _stored_result(revision: int | None, aspects: list | None):
+    return {
+        "id": FAKE_IDS["synastry_results"],
+        "owner_user_id": "test-user-id",
+        "content": "## Tổng quan\ntext",
+        "created_at": "2026-01-01T00:00:00Z",
+        "owner_profile_revision": revision,
+        "inter_aspects": aspects,
+        "partner_profiles": {
+            "name": "Mai", "birth_date": "1990-04-12", "birth_time": "08:30:00",
+            "birth_time_unknown": False, "lat": 21.0278, "lon": 105.8342,
+            "tz_of_birth": "Asia/Ho_Chi_Minh",
+        },
+    }
+
+
+def _install_read(monkeypatch, stored, profile_revision):
+    """Reading path only: the stored result row and the owner's profile."""
+    profile = {**PROFILE, "profile_revision": profile_revision}
+
+    class ReadQuery(FakeQuery):
+        def execute(self):
+            if self.table == "profiles":
+                return type("R", (), {"data": [profile], "count": None})()
+            return type("R", (), {"data": [stored], "count": None})()
+
+    class ReadService:
+        def table(self, name):
+            return ReadQuery(name, [])
+
+    monkeypatch.setattr(synastry, "get_service_client", lambda: ReadService())
+    # Would be called only on the legacy recompute path; make that visible.
+    monkeypatch.setattr(synastry, "_subject_from", lambda _row: object())
+    monkeypatch.setattr(
+        synastry, "calculate_synastry_aspects",
+        lambda _a, _b: [{"p1": "sun", "p2": "saturn", "type": "opposition", "orb": 1.0}],
+    )
+
+    def authenticated(request: Request) -> str:
+        request.state.user_id = "test-user-id"
+        request.state.jwt_claims = {}
+        return "test-user-id"
+
+    app.dependency_overrides[require_user] = authenticated
+
+
+def test_the_reading_records_the_chart_it_was_written_for(monkeypatch):
+    """Without this the row cannot answer "which chart?" at all, and every
+    staleness check below has nothing to compare."""
+    ops: list[str] = []
+    install(monkeypatch, ops)
+    captured = {}
+    original = FakeQuery.insert
+
+    def capture(self, values):
+        if self.table == "synastry_results":
+            captured.update(values)
+        return original(self, values)
+
+    monkeypatch.setattr(FakeQuery, "insert", capture)
+
+    assert client.post("/v1/synastry", json=PARTNER_BODY).status_code == 201
+    assert captured["owner_profile_revision"] == PROFILE["profile_revision"]
+    assert captured["inter_aspects"] == []
+
+
+def test_a_reading_returns_the_aspects_it_was_written_against(monkeypatch):
+    """The regression. Recomputing here let an edited birth time move the
+    evidence while the prose stayed, so the page argued with itself."""
+    _install_read(monkeypatch, _stored_result(1, STORED_ASPECTS), profile_revision=1)
+
+    body = client.get(f"/v1/synastry/{FAKE_IDS['synastry_results']}").json()
+
+    assert [a["type"] for a in body["inter_aspects"]] == ["trine", "square"]
+    assert body["is_stale"] is False
+
+
+def test_an_edited_birth_chart_marks_the_reading_stale_without_moving_it(monkeypatch):
+    # Same stored row, owner has since edited their birth data.
+    _install_read(monkeypatch, _stored_result(1, STORED_ASPECTS), profile_revision=2)
+
+    body = client.get(f"/v1/synastry/{FAKE_IDS['synastry_results']}").json()
+
+    assert body["is_stale"] is True
+    # Flagged, not rewritten: the reading still shows what it was written for.
+    assert [a["type"] for a in body["inter_aspects"]] == ["trine", "square"]
+
+
+def test_a_row_with_no_stored_aspects_falls_back_and_says_so(monkeypatch):
+    """Rows from before the snapshot existed are the one case where prose and
+    evidence genuinely cannot be reconciled, so they are always stale."""
+    _install_read(monkeypatch, _stored_result(None, None), profile_revision=1)
+
+    body = client.get(f"/v1/synastry/{FAKE_IDS['synastry_results']}").json()
+
+    assert body["is_stale"] is True
+    assert [a["type"] for a in body["inter_aspects"]] == ["opposition"]

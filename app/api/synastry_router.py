@@ -59,6 +59,10 @@ class SynastryResult(BaseModel):
     inter_aspects: list[Aspect]
     interpretation: str
     created_at: str
+    # True when the owner edited their birth data after this reading was
+    # written, so it describes a chart the account no longer has. Additive:
+    # older clients that ignore it behave exactly as before.
+    is_stale: bool = False
 
 
 def _subject_from(row: dict):
@@ -156,6 +160,11 @@ def create_synastry(request: Request, partner: PartnerInput) -> SynastryResult:
         "owner_user_id": user_id,
         "partner_profile_id": partner_row["id"],
         "content": interpretation,
+        # Both recorded so the reading stays tied to the chart it was written
+        # for. The aspects especially: deriving them again at read time is
+        # what let the evidence drift away from the prose above it.
+        "owner_profile_revision": profile["profile_revision"],
+        "inter_aspects": aspects,
     }).execute().data[0]
 
     return SynastryResult(
@@ -182,25 +191,41 @@ def get_synastry(request: Request, result_id: UUID) -> SynastryResult:
     row = rows[0]
     partner = row["partner_profiles"]
 
-    # Aspects are recomputed (deterministic) rather than stored — content
-    # stores only the interpretation text. Note: if the user edited their
-    # own birth data since creation, aspects reflect the NEW chart while the
-    # interpretation text was written for the old one (acceptable — a
-    # regenerate flow is a later product decision).
     me_rows = (
         get_service_client().table("profiles").select("*")
         .eq("user_id", user_id).limit(1).execute().data
     )
-    if not me_rows or me_rows[0]["birth_date"] is None:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Complete your own birth details first",
-        )
-    aspects = calculate_synastry_aspects(_subject_from(me_rows[0]), _subject_from(partner))
+    current_revision = me_rows[0]["profile_revision"] if me_rows else None
+    stored_revision = row.get("owner_profile_revision")
+    is_stale = (
+        stored_revision is None
+        or current_revision is None
+        or stored_revision != current_revision
+    )
+
+    # The aspects the reading was WRITTEN against, not the ones the owner's
+    # chart would produce today. Recomputing them here is what made an edited
+    # birth time move the evidence while the prose above it stayed put, so
+    # the page argued with itself. Rows from before this was stored fall back
+    # to recomputation and are reported stale, because that is the one case
+    # where the two genuinely cannot be reconciled.
+    stored_aspects = row.get("inter_aspects")
+    if stored_aspects is not None:
+        aspects = stored_aspects
+    else:
+        if not me_rows or me_rows[0]["birth_date"] is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Complete your own birth details first",
+            )
+        aspects = calculate_synastry_aspects(_subject_from(me_rows[0]), _subject_from(partner))
+        is_stale = True
+
     return SynastryResult(
         id=row["id"],
         partner_name=partner["name"],
         inter_aspects=[Aspect(**a) for a in aspects],
         interpretation=row["content"],
         created_at=row["created_at"],
+        is_stale=is_stale,
     )
